@@ -17,16 +17,34 @@ from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 from scipy.optimize import linear_sum_assignment
 
+using_pi = False
+picam2 = None
+if using_pi:
+    from picamera2 import Picamera2
+    # picamera2 needs numpy 1 seems like
+    picam2 = Picamera2()
+    picam2.preview_configuration.main.size = (1280,720)
+    picam2.preview_configuration.main.format = "RGB888"
+    picam2.preview_configuration.align()
+    picam2.configure("preview")
+    picam2.start()
+
 canvas_size = 500
 feed_preview_size = 100
 color_swatch_size = 50
 
-max_num_colors = 5
-color_max_distance = 10
+text_color = (127, 127, 127)
+font = cv2.FONT_HERSHEY_SIMPLEX  # Font type
+font_scale = 0.5  # Font scale (size)
+thickness = 1  # Thickness of the text
 
-trace_length_min = 2
-trace_length_max = 4
-max_frame_number = 6
+
+max_num_colors = 5
+color_max_distance = 12
+
+trace_length_min = 3
+trace_length_max = 6
+max_frame_number = 10
 
 
 def rgb_to_lab(rgb):
@@ -118,6 +136,8 @@ def extract_colors_gmm(image, max_colors, resize=True, resize_max=200, color_mod
         return rgb_colors
     return colors
 
+
+
 class ColorTrack:
     def __init__(self, color):
         self.color = np.array(color)
@@ -129,20 +149,31 @@ class ColorTrack:
         self.missed = 0
         self.age += 1
 
-# Initialize the camera module
-cap = cv2.VideoCapture(0)
+    def print_swatch(self):
 
-# Check if the camera is initialized correctly
-if not cap.isOpened():
-    print("Cannot open camera")
-    exit()
+        return self.color, str(self.age), "-"*self.missed
 
-tracks = [] #lab
+cap = None
+if not using_pi:
+    # Initialize the camera module
+    cap = cv2.VideoCapture(0)
+
+    # Check if the camera is initialized correctly
+    if not cap.isOpened():
+        print("Cannot open camera")
+        exit()
+
+tracks = [] #rgb
 canvas_color = None
 
 # Display the camera feed
 while True:
-    ret, frame = cap.read()
+
+    if using_pi:
+        frame = picam2.capture_array()
+    else:
+        ret, frame = cap.read()
+
     # cv2.imshow('frame', frame)
     new_colors = extract_colors_kmeans(frame, max_num_colors, color_mode="lab") #rgb
     # print(new_colors)
@@ -200,6 +231,7 @@ while True:
     feed_preview = resize_to_max(frame, feed_preview_size)
     canvas[0:feed_preview.shape[0], 0:feed_preview.shape[1]] = feed_preview
     feed_preview_y = feed_preview.shape[0]
+    feed_preview_x = feed_preview.shape[1]
     for ci in range(len(new_colors)): #lab
         # start at feed_preview
         rgb_color = new_colors[ci]
@@ -209,6 +241,14 @@ while True:
         canvas[y_min:y_min+color_swatch_size, 0:color_swatch_size, 0] = rgb_color[2]
         canvas[y_min:y_min+color_swatch_size, 0:color_swatch_size, 1] = rgb_color[1]
         canvas[y_min:y_min+color_swatch_size, 0:color_swatch_size, 2] = rgb_color[0]
+
+    for i, track in enumerate(tracks):
+        rgb_color, age_str, missed_str = track.print_swatch()
+        bgr_color = [rgb_color[2], rgb_color[1], rgb_color[0]]
+        y_min = feed_preview_y + i*color_swatch_size
+        canvas[y_min:y_min+color_swatch_size, feed_preview_x:feed_preview_x+color_swatch_size] = bgr_color
+        canvas = cv2.putText(canvas, f'age{age_str}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
+        canvas = cv2.putText(canvas, f'missed{missed_str}', (feed_preview_x+color_swatch_size, y_min+25), font, font_scale, text_color, thickness)
 
     cv2.imshow('frame', canvas)
     
