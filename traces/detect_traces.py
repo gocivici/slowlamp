@@ -193,17 +193,28 @@ while True:
             # print(dist)
             cost_matrix[i, j] = dist
 
-    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    # row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    # match color to closest existing track, not a global optimization 
+    if len(cost_matrix) > 0:
+        closest_track_ids = np.argmin(cost_matrix, axis=0)
+    else:
+        closest_track_ids = []
 
     assigned_tracks = set()
     assigned_colors = set()
     
-    # Update matched tracks
-    for i, j in zip(row_ind, col_ind):
-        if cost_matrix[i, j] < color_max_distance:
-            tracks[i].update(new_colors[j])
-            assigned_tracks.add(i)
-            assigned_colors.add(j)
+    # # Update matched tracks (after linear sum assignment)
+    # for i, j in zip(row_ind, col_ind):
+    #     if cost_matrix[i, j] < color_max_distance:
+    #         tracks[i].update(new_colors[j])
+    #         assigned_tracks.add(i)
+    #         assigned_colors.add(j)
+
+    for ni, ti in enumerate(closest_track_ids):
+        if cost_matrix[ti, ni] < color_max_distance:
+            tracks[ti].update(new_colors[ni])
+            assigned_tracks.add(ti)
+            assigned_colors.add(ni)
 
     # Age and remove unmatched tracks
     new_tracks = []
@@ -213,7 +224,7 @@ while True:
         if track.missed <= max_frame_number: # max_missed:
             new_tracks.append(track)
         if track.age >= trace_length_min and track.age <= trace_length_max and track.missed == trace_length_min:
-            canvas_color = track.color #lab
+            canvas_color = track.color #rgb
 
     # Add new tracks for unmatched colors
     for j, color in enumerate(new_colors):
