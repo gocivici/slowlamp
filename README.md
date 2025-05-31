@@ -15,3 +15,6 @@ picamera2 needs numpy 1 seems like: currently using 1.26 on pi
 
 - https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi
 - https://learn.adafruit.com/neopixels-on-raspberry-pi/python-usage
+
+
+- sudo ~/slowlampvenv/bin/python3 detect_traces.py

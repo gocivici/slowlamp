@@ -1,3 +1,9 @@
+colors = []
+for r in range(0, 255, 10):
+	for g in range(0, 255, 10):
+		for b in range(0, 255, 10):
+			colors.append( (r, g, b))
+			
 import cv2
 import numpy as np
 from sklearn.cluster import KMeans
@@ -278,3 +284,4 @@ if not using_pi:
     cv2.destroyAllWindows()
 else:
     pixels[0] = (0, 0, 0)
+
