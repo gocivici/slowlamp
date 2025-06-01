@@ -1,9 +1,3 @@
-colors = []
-for r in range(0, 255, 10):
-	for g in range(0, 255, 10):
-		for b in range(0, 255, 10):
-			colors.append( (r, g, b))
-			
 import cv2
 import numpy as np
 from sklearn.cluster import KMeans
@@ -22,8 +16,9 @@ from colormath.color_diff import delta_e_cie2000 #numpy error asscalar
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 from scipy.optimize import linear_sum_assignment
+import time
 
-using_pi = True
+using_pi = False
 picam2 = None
 if using_pi:
     import board
@@ -37,7 +32,18 @@ if using_pi:
     picam2.preview_configuration.main.format = "RGB888"
     picam2.preview_configuration.align()
     picam2.configure("preview")
+
+    picam2.set_controls({'AwbEnable': False})
     picam2.start()
+
+
+pixel_colors = []
+for r in range(0, 255, 10):
+	for g in range(0, 255, 10):
+		for b in range(0, 255, 10):
+			pixel_colors.append( (r, g, b))
+			
+result_colors = []
 
 canvas_size = 500
 feed_preview_size = 100
@@ -85,67 +91,12 @@ def resize_to_max(image, resize_max):
 
     return image
 
-def extract_colors_kmeans(image, num_colors, resize=True, resize_max=200, color_mode="bgr"):
-
-    if resize:
-        image = resize_to_max(image, resize_max)
-
-    if color_mode == "lab":
-        # print("lab mode")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-
-    img_np = copy.copy(image)
-    pixels = img_np.reshape(-1, 3)
-
-    # Fit KMeans to pixel data
-    kmeans = KMeans(n_clusters=num_colors, random_state=42)
-    kmeans.fit(pixels)
-
-    # Get dominant colors
-    colors = kmeans.cluster_centers_.astype(int)
-    if color_mode == "lab":
-        rgb_colors = cv2.cvtColor(np.array([colors]).astype(np.uint8), cv2.COLOR_LAB2RGB)[0]
-        return rgb_colors
-    return colors
-
-def extract_colors_gmm(image, max_colors, resize=True, resize_max=200, color_mode="bgr"):
-    if resize:
-        image = resize_to_max(image, resize_max)
-    
-    if color_mode == "lab":
-        # print("lab mode")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        # print(image[0, 0])
-
-    img_np = copy.copy(image)
-    pixels = img_np.reshape(-1, 3)
-
-    lowest_bic = np.infty
-    best_gmm = None
-    for n_components in range(1, max_colors + 1):
-        gmm = GaussianMixture(n_components=n_components, covariance_type='tied', random_state=42)
-        gmm.fit(pixels)
-        bic = gmm.bic(pixels)
-        if bic < lowest_bic:
-            lowest_bic = bic
-            best_gmm = gmm
-
-      # Assign clusters
-    labels = best_gmm.predict(pixels)
-
-    # Count number of pixels per cluster
-    counts = np.bincount(labels)
-    
-    # Get cluster centers (colors)
-    colors = best_gmm.means_.astype(int)
-
-    # Rank colors by frequency
-    # ranked = sorted(zip(counts, colors), reverse=True)
-    if color_mode == "lab":
-        rgb_colors = cv2.cvtColor(np.array([colors]).astype(np.uint8), cv2.COLOR_LAB2RGB)[0]
-        return rgb_colors
-    return colors
-
+def extract_center_color(frame):
+    h, w = frame.shape[:2]
+    cx, cy = w // 2, h // 2
+    crop = frame[cy-15:cy+15, cx-15:cx+15]
+    avg_color = crop.mean(axis=(0, 1))  # BGR
+    return avg_color[::-1]  # Return as RGB
 
 
 class ColorTrack:
@@ -176,8 +127,17 @@ if not using_pi:
 tracks = [] #rgb
 canvas_color = None
 
+test_index = 0
+
 # Display the camera feed
-while True:
+while test_index < len(pixel_colors):
+    test_color = pixel_colors[test_index]
+    if using_pi:
+        pixels[0] = test_color
+    
+    time.sleep(0.8)
+
+    test_index += 1
 
     if using_pi:
         frame = picam2.capture_array()
@@ -185,98 +145,28 @@ while True:
         ret, frame = cap.read()
 
     # cv2.imshow('frame', frame)
-    new_colors = extract_colors_kmeans(frame, max_num_colors, color_mode="lab") #rgb
-    # print(new_colors)
-    #if len(tracks) == 0:
-        #tracks.append(dominant_colors)
-    #    continue
-    
-    n, m = len(tracks), len(new_colors)
-    cost_matrix = np.full((n, m), np.inf)
-
-    # Build cost matrix
-    for i, track in enumerate(tracks):
-        for j, color in enumerate(new_colors):
-            track_lab_color = rgb_to_lab(track.color)
-            new_lab_color = rgb_to_lab(color)
-            dist = color_functions.ciede2000(track_lab_color, new_lab_color)
-            # print(dist)
-            cost_matrix[i, j] = dist
-
-    # row_ind, col_ind = linear_sum_assignment(cost_matrix)
-    # match color to closest existing track, not a global optimization 
-    if len(cost_matrix) > 0:
-        closest_track_ids = np.argmin(cost_matrix, axis=0)
-    else:
-        closest_track_ids = []
-
-    assigned_tracks = set()
-    assigned_colors = set()
-    
-    # # Update matched tracks (after linear sum assignment)
-    # for i, j in zip(row_ind, col_ind):
-    #     if cost_matrix[i, j] < color_max_distance:
-    #         tracks[i].update(new_colors[j])
-    #         assigned_tracks.add(i)
-    #         assigned_colors.add(j)
-
-    for ni, ti in enumerate(closest_track_ids):
-        if cost_matrix[ti, ni] < color_max_distance:
-            tracks[ti].update(new_colors[ni])
-            assigned_tracks.add(ti)
-            assigned_colors.add(ni)
-
-    # Age and remove unmatched tracks
-    new_tracks = []
-    for i, track in enumerate(tracks):
-        if i not in assigned_tracks:
-            track.missed += 1
-        if track.missed <= max_frame_number: # max_missed:
-            new_tracks.append(track)
-        if track.age >= trace_length_min and track.age <= trace_length_max and track.missed == trace_length_min:
-            canvas_color = track.color #rgb
-            if using_pi:
-                pixels[0] = (track.color[0], track.color[1], track.color[2])
-
-    # Add new tracks for unmatched colors
-    for j, color in enumerate(new_colors):
-        if j not in assigned_colors:
-            new_tracks.append(ColorTrack(color))
-    
-    tracks = new_tracks
+    recevied_color = extract_center_color(frame) #rgb
+    result_colors.append(recevied_color)
 
     canvas = np.ones((500, 500, 3)).astype(np.uint8)
     if canvas_color is not None:
-        canvas_rgb_color = canvas_color #lab_to_rgb(canvas_color)
-        canvas[:, :, 0] = canvas_rgb_color[2]
-        canvas[:, :, 1] = canvas_rgb_color[1]
-        canvas[:, :, 2] = canvas_rgb_color[0]
+        # canvas_rgb_color = canvas_color #lab_to_rgb(canvas_color)
+        canvas[:, :, 0] = recevied_color[2]
+        canvas[:, :, 1] = recevied_color[1]
+        canvas[:, :, 2] = recevied_color[0]
     feed_preview = resize_to_max(frame, feed_preview_size)
     canvas[0:feed_preview.shape[0], 0:feed_preview.shape[1]] = feed_preview
     feed_preview_y = feed_preview.shape[0]
     feed_preview_x = feed_preview.shape[1]
-    for ci in range(len(new_colors)): #lab
-        # start at feed_preview
-        rgb_color = new_colors[ci]
-        # print(lab_color)
-        # rgb_color = lab_color #lab_to_rgb(lab_color)
-        y_min = feed_preview_y + ci*color_swatch_size
-        canvas[y_min:y_min+color_swatch_size, 0:color_swatch_size, 0] = rgb_color[2]
-        canvas[y_min:y_min+color_swatch_size, 0:color_swatch_size, 1] = rgb_color[1]
-        canvas[y_min:y_min+color_swatch_size, 0:color_swatch_size, 2] = rgb_color[0]
-
-    for i, track in enumerate(tracks):
-        rgb_color, age_str, missed_str = track.print_swatch()
-        bgr_color = [rgb_color[2], rgb_color[1], rgb_color[0]]
-        y_min = feed_preview_y + i*color_swatch_size
-        canvas[y_min:y_min+color_swatch_size, feed_preview_x:feed_preview_x+color_swatch_size] = bgr_color
-        canvas = cv2.putText(canvas, f'age{age_str}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
-        canvas = cv2.putText(canvas, f'missed{missed_str}', (feed_preview_x+color_swatch_size, y_min+25), font, font_scale, text_color, thickness)
+    canvas = cv2.putText(canvas, f'pixel (rgb): ({test_color[0]}, {test_color[1]}, {test_color[2]})', (feed_preview_x, 20), font, font_scale, text_color, thickness)
+    canvas = cv2.putText(canvas, f'camera (rgb): ({int(recevied_color[0])}, {int(recevied_color[1])}, {int(recevied_color[2])})', (feed_preview_x, 50), font, font_scale, text_color, thickness)
+        
 
     cv2.imshow('frame', canvas)
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
 
 if not using_pi:
     # Release the camera resources
@@ -285,3 +175,4 @@ if not using_pi:
 else:
     pixels[0] = (0, 0, 0)
 
+np.savez("pairings.npz", pixel_colors = pixel_colors, result_colors = result_colors)
