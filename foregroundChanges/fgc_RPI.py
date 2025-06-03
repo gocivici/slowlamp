@@ -11,9 +11,10 @@ from picamera2 import Picamera2
 #------------------------Camera Setup---------------------------------------
 
 def capture_image():
-    picam2 = Picamera2()
-    picam2.start()
-    frame = picam2.capture_array()
+    camera = Picamera2()
+    camera.resolution= (480,360)
+    camera.start(show_preview=False)
+    frame = camera.capture_array()
     # cap = cv2.VideoCapture(1,cv2.CAP_DSHOW) 
     # if not cap.isOpened():
     #     raise Exception("Could not open webcam")
