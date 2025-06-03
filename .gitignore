@@ -1,2 +1,4 @@
 __pycache__/
 *.npz
+storage.txt
+*_storage.txt

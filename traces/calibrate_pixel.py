@@ -34,15 +34,29 @@ if using_pi:
     picam2.configure("preview")
 
     picam2.set_controls({'AwbEnable': False})
+    picam2.set_controls({'AeEnable': False})
     picam2.start()
 
 
 pixel_colors = []
-for r in range(0, 255, 10):
-	for g in range(0, 255, 10):
-		for b in range(0, 255, 10):
+# for r in range(0, 255, 10):
+# 	for g in range(0, 255, 10):
+# 		for b in range(0, 255, 10):
+# 			pixel_colors.append( (r, g, b))
+
+pixel_colors.append( (0, 0, 0))
+
+pixel_colors.append( (255, 0, 0))
+pixel_colors.append( (0, 255, 0))
+pixel_colors.append( (0, 0, 255))
+
+pixel_colors.append( (255, 255, 255))
+
+for r in range(0, 255, 32):
+	for g in range(0, 255, 32):
+		for b in range(0, 255, 32):
 			pixel_colors.append( (r, g, b))
-			
+
 result_colors = []
 
 canvas_size = 500
@@ -97,22 +111,6 @@ def extract_center_color(frame):
     crop = frame[cy-15:cy+15, cx-15:cx+15]
     avg_color = crop.mean(axis=(0, 1))  # BGR
     return avg_color[::-1]  # Return as RGB
-
-
-class ColorTrack:
-    def __init__(self, color):
-        self.color = np.array(color)
-        self.age = 0
-        self.missed = 0
-
-    def update(self, new_color, alpha=0.3):
-        self.color = (1 - alpha) * self.color + alpha * np.array(new_color)
-        self.missed = 0
-        self.age += 1
-
-    def print_swatch(self):
-
-        return self.color, str(self.age), "-"*self.missed
 
 cap = None
 if not using_pi:
@@ -175,4 +173,4 @@ if not using_pi:
 else:
     pixels[0] = (0, 0, 0)
 
-np.savez("pairings.npz", pixel_colors = pixel_colors, result_colors = result_colors)
+np.savez("pairings-32.npz", pixel_colors = pixel_colors, result_colors = result_colors)
