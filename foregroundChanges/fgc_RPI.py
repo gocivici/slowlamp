@@ -37,7 +37,7 @@ def dominantColor():
 
 
     print("Waiting 10 seconds")
-    time.sleep(10)  # Wait 15 seconds
+    time.sleep(60)  # Wait 15 seconds
 
 
     # Capture the new image
