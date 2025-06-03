@@ -46,7 +46,7 @@ while True:
     previous_img = current_img
 
     #adjustable threshold value original value =13
-    diff[abs(diff)<60.0]=0
+    diff[abs(diff)<13.0]=0
 
     #create mask based on threshold
     gray = cv2.cvtColor(diff.astype(np.uint8), cv2.COLOR_BGR2GRAY)
@@ -99,12 +99,21 @@ while True:
 
     label= np.reshape(label, label.size)
     label_counts = np.bincount(label)
-    
-    for idx, color in enumerate(center):
+
+    sorted_indices = np.argsort(-label_counts)
+
+    # Sort center and label_counts accordingly
+    center_sorted = center[sorted_indices]
+    label_counts_sorted = label_counts[sorted_indices]
+
+    print(enumerate(center))
+    for idx, color in enumerate(center_sorted):
         plt.subplot(1, k, idx+1)
         plt.axis('off')
         plt.imshow([[color / 255]])  # Normalize RGB values to range [0,1]
-        plt.title(f'%{(100*label_counts[idx]/imgNoB.shape[0]):.2f}')
+        plt.title(f'%{(100*label_counts_sorted[idx]/imgNoB.shape[0]):.2f}')
+        print(color)
+        print(label_counts)
     plt.tight_layout()
     plt.show()
     # plt.pause(0.001)
