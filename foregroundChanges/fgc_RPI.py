@@ -9,11 +9,12 @@ from picamera2 import Picamera2
 
 
 #------------------------Camera Setup---------------------------------------
+camera = Picamera2()
+camera.resolution= (480,360)
+camera.start(show_preview=False)
 
 def capture_image():
-    camera = Picamera2()
-    camera.resolution= (480,360)
-    camera.start(show_preview=False)
+
     frame = camera.capture_array()
     # cap = cv2.VideoCapture(1,cv2.CAP_DSHOW) 
     # if not cap.isOpened():
@@ -36,7 +37,7 @@ def dominantColor():
 
 
     print("Waiting 10 seconds")
-    time.sleep(10)  # Wait 15 seconds
+    time.sleep(60)  # Wait 15 seconds
 
 
     # Capture the new image
