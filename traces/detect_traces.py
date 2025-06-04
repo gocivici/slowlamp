@@ -19,7 +19,7 @@ from scipy.optimize import linear_sum_assignment
 import time 
 from datetime import datetime
 
-using_pi = False
+using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 
