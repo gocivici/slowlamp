@@ -22,6 +22,7 @@ from datetime import datetime
 using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
+display_matrix_mode = "gradient"
 
 day_length = 5 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -33,7 +34,7 @@ picam2 = None
 if using_pi:
     import board
     import neopixel
-    pixels = neopixel.NeoPixel(board.D12, 1, brightness=125)
+    pixels = neopixel.NeoPixel(board.D12, 24, brightness=0.5, pixel_order = neopixel.GRBW)
 
     from picamera2 import Picamera2
     # picamera2 needs numpy 1 seems like
@@ -42,6 +43,8 @@ if using_pi:
     picam2.preview_configuration.main.format = "RGB888"
     picam2.preview_configuration.align()
     picam2.configure("preview")
+    
+    picam2.set_controls({'AnalogueGain': 12.0, 'ExposureTime': 17000})
     picam2.start()
 
 canvas_size = 500
@@ -234,8 +237,12 @@ class Trace:
 
         return swatch
 
-
-
+def linear_gradient(rgbw1, rgbw2, ratio):
+    r = int(rgbw2[0]*(1-ratio) + rgbw1[0]*ratio)
+    g = int(rgbw2[1]*(1-ratio) + rgbw1[1]*ratio)
+    b = int(rgbw2[2]*(1-ratio) + rgbw1[2]*ratio)
+    return (r, g, b, 0)
+    
 cap = None
 if not using_pi:
     # Initialize the camera module
@@ -426,9 +433,26 @@ while True:
                 stored_traces.append(stored_trace)
                 day_traces = []
                 if using_pi: 
-                    memory_color = stored_trace.main_color
+                    memory_color = (int(stored_trace.main_color[0]), int(stored_trace.main_color[1]), int(stored_trace.main_color[2]), 0)
                     pixels[0] = memory_color
-
+                    if stored_trace.traces_storing_mode != "single":
+                        sup_color = (int(stored_trace.supplemental_colors[0][0]), int(stored_trace.supplemental_colors[0][1]), int(stored_trace.supplemental_colors[0][2]), 0)
+                        if display_matrix_mode == "checkered":
+                            for strip in range(3):
+                                for i in range(8):
+                                    if i%2 == 1:
+                                        pixels[strip*8+i] = sup_color
+                                    else:
+                                        pixels[strip*8+i] = memory_color
+                        else:
+                            for strip in range(3):
+                                for i in range(8):
+                                    if strip % 2 == 1:
+                                        pixels[strip*8+i] = linear_gradient(sup_color, memory_color, i/8)
+                                    else:
+                                        pixels[strip*8+i] = linear_gradient(memory_color, sup_color, i/8)
+                                
+                            
             start_time = time.time()
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -439,7 +463,7 @@ if not using_pi:
     cap.release()
     cv2.destroyAllWindows()
 else:
-    pixels[0] = (0, 0, 0)
+    pixels.fill( (0, 0, 0))
 
 storage_file.flush()
 storage_file.close()
