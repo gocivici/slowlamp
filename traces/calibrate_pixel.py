@@ -18,7 +18,7 @@ from colormath.color_conversions import convert_color
 from scipy.optimize import linear_sum_assignment
 import time
 
-using_pi = False
+using_pi = True
 picam2 = None
 if using_pi:
     import board
@@ -49,6 +49,10 @@ pixel_colors.append( (0, 0, 0))
 pixel_colors.append( (255, 0, 0))
 pixel_colors.append( (0, 255, 0))
 pixel_colors.append( (0, 0, 255))
+
+pixel_colors.append( (255, 255, 0))
+pixel_colors.append( (0, 255, 255))
+pixel_colors.append( (255, 0, 255))
 
 pixel_colors.append( (255, 255, 255))
 
