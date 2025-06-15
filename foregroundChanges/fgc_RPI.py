@@ -7,16 +7,16 @@ import os
 from PIL import Image
 from picamera2 import Picamera2
 
-
+previous_img = None
 #------------------------Camera Setup---------------------------------------
 camera = Picamera2()
 camera.resolution= (480,360)
 camera.start(show_preview=False)
 
 def capture_image():
-
+    
     frame = camera.capture_array()
-    # cap = cv2.VideoCapture(1,cv2.CAP_DSHOW) 
+    # cap = cv2.VideoCapture(0,cv2.CAP_DSHOW) 
     # if not cap.isOpened():
     #     raise Exception("Could not open webcam")
     # ret, frame = cap.read()
@@ -25,23 +25,31 @@ def capture_image():
     #     raise Exception("Failed to capture image")
     return frame
 
-def dominantColor():
+def dominantColor(waitTime):
+    # time.sleep(waitTime)
+    global previous_img
+    if previous_img is None:
+        previous_img = capture_image()
+        print("taking first picture")
 
     
 
-    previous_img = capture_image()
 
     previous_img = cv2.resize(previous_img, (480, 360))
 
 # cv2.imshow("web live",previous_img)
 
 
-    print("Waiting 10 seconds")
-    time.sleep(60)  # Wait 15 seconds
+    print("Waiting seconds:",waitTime)
+    time.sleep(waitTime)  # Wait 15 seconds
 
 
     # Capture the new image
     current_img = capture_image()
+    print("taking second picture")
+
+    cv2.imwrite('curim.png', current_img)
+    cv2.imwrite('previm.png', previous_img)
 
     current_img = cv2.resize(current_img, (480, 360))
 
@@ -60,7 +68,7 @@ def dominantColor():
     
 
     #adjustable threshold value original value =13
-    diff[abs(diff)<50]=0
+    diff[abs(diff)<13]=0
 
     #create mask based on threshold
     gray = cv2.cvtColor(diff.astype(np.uint8), cv2.COLOR_BGR2GRAY)
@@ -77,8 +85,7 @@ def dominantColor():
     #use the masks to extract the relevant parts from the image
     fgimg = cv2.bitwise_and(current_img,current_img,mask = morph)
 
-
-
+    cv2.imwrite('substract.png', fgimg)
     #-------------------------Color Detection-----------------------------------
 
     # image_rgb = cv2.cvtColor(fgimg,cv2.COLOR_BGR2RGB) #convert to RGB image
@@ -108,7 +115,7 @@ def dominantColor():
     # stop after 10 iterations or when EPS(change in cluster centers) is less than 0.2
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 0.2)
     k = 3 # number of clusters
-
+    previous_img = current_img
     #Apply the K-Means clustering
     DominantColors = np.array([[0, 0, 0, 0]] * 5)
     try:
@@ -129,13 +136,14 @@ def dominantColor():
             # plt.axis('off')
             # plt.imshow([[color / 255]])  # Normalize RGB values to range [0,1]
             # plt.title(f'%{(100*label_counts_sorted[idx]/imgNoB.shape[0]):.2f}')
-            alpha = 255 * label_counts_sorted[idx] / imgNoB.shape[0]
+            # alpha = 255 * label_counts_sorted[idx] / imgNoB.shape[0]
+            alpha = 255
             DominantColors[idx] = list(color) + [alpha]  
             print(label_counts)
         print(DominantColors[0])
     except:
         DominantColors[0]=[255, 255, 255, 0]
-    previous_img = current_img
+    
     return DominantColors[0].round()
 
 
@@ -153,7 +161,7 @@ def saveColor(color_array):
     print(existing_pixels)
 
     # Set fixed number of columns
-    columns = 7
+    columns = 24
     total_pixels = len(existing_pixels)
 
     # Calculate required number of rows
@@ -174,7 +182,7 @@ def saveColor(color_array):
 
 
 while True:
-    color = dominantColor()
+    color = dominantColor(5)
     print(color)
     saveColor(color)
 
