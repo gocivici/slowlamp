@@ -182,7 +182,7 @@ def saveColor(color_array):
 
 
 while True:
-    color = dominantColor(5)
+    color = dominantColor(3600)
     print(color)
     saveColor(color)
 
