@@ -10,7 +10,7 @@ from picamera2 import Picamera2
 previous_img = None
 #------------------------Camera Setup---------------------------------------
 camera = Picamera2()
-camera.resolution= (4056,3040)
+camera.resolution= (2028,1520)
 camera.start(show_preview=False)
 
 def capture_image():
