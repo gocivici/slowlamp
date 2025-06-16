@@ -182,7 +182,7 @@ def saveColor(color_array):
 
 
 while True:
-    color = dominantColor(30) #time in seconds
+    color = dominantColor(3600) #time in seconds
     print(color)
     saveColor(color)
 
