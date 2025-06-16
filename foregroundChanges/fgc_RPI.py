@@ -10,7 +10,7 @@ from picamera2 import Picamera2
 previous_img = None
 #------------------------Camera Setup---------------------------------------
 camera = Picamera2()
-camera.resolution= (480,360)
+camera.resolution= (4056,3040)
 camera.start(show_preview=False)
 
 def capture_image():
@@ -36,7 +36,7 @@ def dominantColor(waitTime):
     
 
 
-    previous_img = cv2.resize(previous_img, (480, 360))
+    # previous_img = cv2.resize(previous_img, (480, 360))
 
 # cv2.imshow("web live",previous_img)
 
@@ -52,7 +52,7 @@ def dominantColor(waitTime):
     cv2.imwrite('curim.png', current_img)
     cv2.imwrite('previm.png', previous_img)
 
-    current_img = cv2.resize(current_img, (480, 360))
+    # current_img = cv2.resize(current_img, (480, 360))
 
 #-------------------------Backgorund Substraction-----------------------------------
     # Compare with the previous image
