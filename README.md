@@ -24,3 +24,16 @@ picamera2 needs numpy 1 seems like: currently using 1.26 on pi
 
 
 - sudo ~/slowlampvenv/bin/python3 detect_traces.py
+
+## Foreground Changes Notes
+```python 
+dominantColor(time)
+``` 
+main function that does color detection `time` is in deconds
+
+```python
+diff[abs(diff)<13]=0
+```
+Adjustable value for image substraction, the lower the number the more the sensitivity
+
+

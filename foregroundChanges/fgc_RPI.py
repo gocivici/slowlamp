@@ -16,6 +16,7 @@ camera.start(show_preview=False)
 def capture_image():
     
     frame = camera.capture_array()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB )
     # cap = cv2.VideoCapture(0,cv2.CAP_DSHOW) 
     # if not cap.isOpened():
     #     raise Exception("Could not open webcam")
@@ -54,17 +55,16 @@ def dominantColor(waitTime):
     current_img = cv2.resize(current_img, (480, 360))
 
 #-------------------------Backgorund Substraction-----------------------------------
-        # Compare with the previous image
+    # Compare with the previous image
     diff1=cv2.subtract(current_img,previous_img)
     diff2=cv2.subtract(previous_img,current_img)
     diff = diff1+diff2
 
-        # Optional: Show difference
+
     # cv2.imshow("previous", previous_img)
     # cv2.imshow("current", current_img)
     # cv2.waitKey(1)  # Refresh the window
 
-        # Update previous image for next iteration
     
 
     #adjustable threshold value original value =13
@@ -182,7 +182,7 @@ def saveColor(color_array):
 
 
 while True:
-    color = dominantColor(3600)
+    color = dominantColor(30) #time in seconds
     print(color)
     saveColor(color)
 
