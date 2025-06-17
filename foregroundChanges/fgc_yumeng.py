@@ -8,18 +8,18 @@ from PIL import Image
 from datetime import datetime
 
 
-using_pi = False
+using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 0.2 #minutes
+day_length = 5 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
 if using_pi:
     import board
     import neopixel
-    neopixels = neopixel.NeoPixel(board.D12, 24, brightness=0.5, pixel_order = neopixel.GRBW)
+    neopixels = neopixel.NeoPixel(board.D12, 24, brightness=0.2, pixel_order = neopixel.GRBW)
 
     neopixel_grid = np.array([np.arange(8), 8+np.arange(8)[::-1], 16+np.arange(8)])
 
@@ -27,8 +27,8 @@ if using_pi:
     from picamera2 import Picamera2
     camera = Picamera2()
     camera.resolution= (2028,1520)
-
-    camera.set_controls({'AnalogueGain': 12.0, 'ExposureTime': 17000})
+    camera.preview_configuration.main.format = "RGB888"
+    camera.set_controls({'AnalogueGain': 25.0, 'ExposureTime': 22000})
     camera.start()
 
     camera.start(show_preview=False)
@@ -100,6 +100,7 @@ def capture_image():
         ret, frame = cap.read()
     
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB )
+    
     return frame
 
 def dominantColor(waitTime):
@@ -143,7 +144,7 @@ def dominantColor(waitTime):
     diff[abs(diff)<13]=0
 
     #create mask based on threshold
-    gray = cv2.cvtColor(diff.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(diff.astype(np.uint8), cv2.COLOR_RGB2GRAY) #rgb?
     gray[np.abs(gray) < 5] = 0
     fgmask = gray.astype(np.uint8)
 
@@ -170,7 +171,7 @@ def dominantColor(waitTime):
     imgNoB=pixels[~np.all(pixels == [0, 0, 0], axis=1)]
     # print(f"background removed : {imgNoB}")
 
-    if len(imgNoB.flatten()) == 0:
+    if len(imgNoB.flatten()) <= 10: #needs to be greater than K
         return np.array([255, 255, 255, 0])
     
     imgNoB = imgNoB[np.newaxis, :, :]
@@ -186,61 +187,65 @@ def dominantColor(waitTime):
     #Define the stopping creteria and number of clusters
     # stop after 10 iterations or when EPS(change in cluster centers) is less than 0.2
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 0.2)
-    k = 3 # number of clusters
+    k = 5 # number of clusters
     previous_img = current_img
     #Apply the K-Means clustering
-    DominantColors = np.array([[0, 0, 0, 0]] * 3)
+    DominantColors = np.array([[0, 0, 0, 0]] * k)
 
-    # try:
-    ret, label, center = cv2.kmeans(imgNoB, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    try:
+        ret, label, center = cv2.kmeans(imgNoB, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
-    label= np.reshape(label, label.size)
-    label_counts = np.bincount(label)
+        label= np.reshape(label, label.size)
+        label_counts = np.bincount(label)
 
-    sorted_indices = np.argsort(-label_counts)
+        sorted_indices = np.argsort(-label_counts)
 
-    # Sort center and label_counts accordingly
-    center_sorted = center[sorted_indices]
-    label_counts_sorted = label_counts[sorted_indices]
+        # Sort center and label_counts accordingly
+        center_sorted = center[sorted_indices]
+        label_counts_sorted = label_counts[sorted_indices]
 
-    print("centers", list(enumerate(center)))
-    for idx, color in enumerate(center_sorted):
-        # plt.subplot(1, k, idx+1)
-        # plt.axis('off')
-        # plt.imshow([[color / 255]])  # Normalize RGB values to range [0,1]
-        # plt.title(f'%{(100*label_counts_sorted[idx]/imgNoB.shape[0]):.2f}')
-        # alpha = 255 * label_counts_sorted[idx] / imgNoB.shape[0]
-        alpha = 255
-        rgb_color = cv2.cvtColor(np.array([[color]]).astype(np.uint8), cv2.COLOR_LAB2RGB)[0][0]
-        DominantColors[idx] = list(rgb_color) + [alpha]  
-        print(idx, color, rgb_color)
-    print(DominantColors[0])
+        print("centers", list(enumerate(center)))
+        for idx, color in enumerate(center_sorted):
+            # plt.subplot(1, k, idx+1)
+            # plt.axis('off')
+            # plt.imshow([[color / 255]])  # Normalize RGB values to range [0,1]
+            # plt.title(f'%{(100*label_counts_sorted[idx]/imgNoB.shape[0]):.2f}')
+            # alpha = 255 * label_counts_sorted[idx] / imgNoB.shape[0]
+            alpha = 255
+            rgb_color = cv2.cvtColor(np.array([[color]]).astype(np.uint8), cv2.COLOR_LAB2RGB)[0][0]
+            DominantColors[idx] = list(rgb_color) + [alpha]  
+            print(idx, color, rgb_color)
+        print("selected dominant color", DominantColors[0])
 
 
-    # display some stuff
-    canvas = np.ones((500, 500, 3)).astype(np.uint8)
-    if canvas_color is not None:
-        canvas[:, :, 0] = canvas_color[2]
-        canvas[:, :, 1] = canvas_color[1]
-        canvas[:, :, 2] = canvas_color[0]
-    
-    canvas[0:prev_preview.shape[0], 0:prev_preview.shape[1], ::-1] = prev_preview
-    canvas[0:curr_preview.shape[0], prev_preview.shape[1]:prev_preview.shape[1]+curr_preview.shape[1], ::-1] = curr_preview
-    canvas[prev_preview.shape[0]:prev_preview.shape[0] + diff_preview.shape[0], 0:prev_preview.shape[1], ::-1] = diff_preview
+        # display some stuff
+        canvas = np.ones((500, 500, 3)).astype(np.uint8)
+        if canvas_color is not None:
+            canvas[:, :, 0] = canvas_color[2]
+            canvas[:, :, 1] = canvas_color[1]
+            canvas[:, :, 2] = canvas_color[0]
+        
+        canvas[0:prev_preview.shape[0], 0:prev_preview.shape[1], ::-1] = prev_preview
+        canvas[0:curr_preview.shape[0], prev_preview.shape[1]:prev_preview.shape[1]+curr_preview.shape[1], ::-1] = curr_preview
+        canvas[prev_preview.shape[0]:prev_preview.shape[0] + diff_preview.shape[0], 0:prev_preview.shape[1], ::-1] = diff_preview
 
-    feed_preview_y = prev_preview.shape[0] + diff_preview.shape[0]
-    feed_preview_x = 0
-    for i, (count, center) in enumerate(zip(label_counts_sorted, DominantColors)):
-        bgr_color = [center[2], center[1], center[0]]
-        y_min = feed_preview_y + i*color_swatch_size
-        canvas[y_min:y_min+color_swatch_size, feed_preview_x:feed_preview_x+color_swatch_size] = bgr_color
-        canvas = cv2.putText(canvas, f'count {count}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
-
-    cv2.imshow('frame', canvas)
+        feed_preview_y = prev_preview.shape[0] + diff_preview.shape[0]
+        feed_preview_x = 0
+        for i, (count, center) in enumerate(zip(label_counts_sorted, DominantColors)):
+            print("DominantColors (rgb) ", i, center)
+            bgr_color = [center[2], center[1], center[0]]
+            y_min = feed_preview_y + i*color_swatch_size
+            canvas[y_min:y_min+color_swatch_size, feed_preview_x:feed_preview_x+color_swatch_size] = bgr_color
+            canvas = cv2.putText(canvas, f'count {count}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
+        
+        # if using_pi:
+        #    canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR) #why??
+            
+        cv2.imshow('frame', canvas)
 
         
-    # except:
-    #    DominantColors[0]=[255, 255, 255, 0]
+    except:
+        DominantColors[0]=[255, 255, 255, 0]
 
     trace = Trace(list(DominantColors[0].round()))
     stored_traces.append(trace)
@@ -250,7 +255,8 @@ def dominantColor(waitTime):
         for row, trace in enumerate(stored_traces[::-1]):
             if row >= len(neopixel_grid[0]):
                 break
-            neopixels[neopixel_grid[:, row]] = trace.main_color
+            for i in neopixel_grid[:, row]:
+                neopixels[i] = trace.main_color
 
     return DominantColors[0].round()
 
@@ -315,7 +321,7 @@ if not using_pi:
     cap.release()
     cv2.destroyAllWindows()
 else:
-    pixels.fill( (0, 0, 0))
+    neopixels.fill( (0, 0, 0))
 
 storage_file.flush()
 storage_file.close()
