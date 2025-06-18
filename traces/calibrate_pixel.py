@@ -23,7 +23,8 @@ picam2 = None
 if using_pi:
     import board
     import neopixel
-    pixels = neopixel.NeoPixel(board.D12, 1, brightness=125)
+    # pixels = neopixel.NeoPixel(board.D12, 1, brightness=125)
+    pixels = neopixel.NeoPixel(board.D12, 24, brightness=0.5, pixel_order = neopixel.GRBW)
 
     from picamera2 import Picamera2
     # picamera2 needs numpy 1 seems like
@@ -35,6 +36,8 @@ if using_pi:
 
     picam2.set_controls({'AwbEnable': False})
     picam2.set_controls({'AeEnable': False})
+    picam2.set_controls({'AnalogueGain': 15.0, 'ExposureTime': 10000})
+
     picam2.start()
 
 
@@ -60,6 +63,11 @@ for r in range(0, 255, 32):
 	for g in range(0, 255, 32):
 		for b in range(0, 255, 32):
 			pixel_colors.append( (r, g, b))
+
+with_white = []
+for color in pixel_colors:
+    for w in list(range(0, 255, 32))+[255]:
+        with_white.append((*color, w))
 
 result_colors = []
 
@@ -132,12 +140,12 @@ canvas_color = None
 test_index = 0
 
 # Display the camera feed
-while test_index < len(pixel_colors):
-    test_color = pixel_colors[test_index]
+while test_index < len(with_white):
+    test_color = with_white[test_index]
     if using_pi:
-        pixels[0] = test_color
+        pixels.fill(test_color)
     
-    time.sleep(0.8)
+    time.sleep(0.6)
 
     test_index += 1
 
@@ -160,7 +168,7 @@ while test_index < len(pixel_colors):
     canvas[0:feed_preview.shape[0], 0:feed_preview.shape[1]] = feed_preview
     feed_preview_y = feed_preview.shape[0]
     feed_preview_x = feed_preview.shape[1]
-    canvas = cv2.putText(canvas, f'pixel (rgb): ({test_color[0]}, {test_color[1]}, {test_color[2]})', (feed_preview_x, 20), font, font_scale, text_color, thickness)
+    canvas = cv2.putText(canvas, f'pixel (rgbw): ({test_color[0]}, {test_color[1]}, {test_color[2]}, {test_color[3]})', (feed_preview_x, 20), font, font_scale, text_color, thickness)
     canvas = cv2.putText(canvas, f'camera (rgb): ({int(recevied_color[0])}, {int(recevied_color[1])}, {int(recevied_color[2])})', (feed_preview_x, 50), font, font_scale, text_color, thickness)
         
 
@@ -175,6 +183,6 @@ if not using_pi:
     cap.release()
     cv2.destroyAllWindows()
 else:
-    pixels[0] = (0, 0, 0)
+    pixels.fill((0, 0, 0, 0))
 
-np.savez("pairings-32.npz", pixel_colors = pixel_colors, result_colors = result_colors)
+np.savez("pairings-32-GRBW.npz", pixel_colors = with_white, result_colors = result_colors)
