@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 
-data = np.load("traces/pairings-32.npz")
+data = np.load("pairings-32-GRBW.npz")
 input_rgbs = data["pixel_colors"].astype(np.int32)
 observed_rgbs = data["result_colors"]
 
@@ -79,24 +79,24 @@ obs_labs = [rgb_to_lab(rgb) for rgb in observed_rgbs_list]
 fig = plt.figure(figsize=(10, 8))
 ax = fig.add_subplot(111, projection='3d')
 
-# Plot input and observed points
-for inp, obs in zip(input_labs, obs_labs):
-    # Arrow from input to observed
-    ax.quiver(inp[0], inp[1], inp[2],
-              obs[0]-inp[0], obs[1]-inp[1], obs[2]-inp[2],
-              arrow_length_ratio=0.1, color='gray', linewidth=1)
+# # Plot input and observed points
+# for inp, obs in zip(input_labs, obs_labs):
+#     # Arrow from input to observed
+#     ax.quiver(inp[0], inp[1], inp[2],
+#               obs[0]-inp[0], obs[1]-inp[1], obs[2]-inp[2],
+#               arrow_length_ratio=0.1, color='gray', linewidth=1)
 
 # Also scatter the points for clarity
 L_in, a_in, b_in = zip(*input_labs)
 L_obs, a_obs, b_obs = zip(*obs_labs)
 
-ax.scatter(L_in, a_in, b_in, c='blue', label='Intended (Input)', s=30)
-ax.scatter(L_obs, a_obs, b_obs, c='red', label='Observed (Camera)', s=30)
+ax.scatter(L_in, a_in, b_in, c='blue', label='Intended (Input)', s=20)
+ax.scatter(L_obs, a_obs, b_obs, c='red', label='Observed (Camera)', s=20)
 
 ax.set_xlabel('L*')
 ax.set_ylabel('a*')
 ax.set_zlabel('b*')
-ax.set_title('Color Shifts: NeoPixel Input vs Camera Observed (CIELAB)')
+ax.set_title('Color Shifts: NeoPixel Input vs Camera Observed (CIELAB) - With Trashbag and White channel')
 ax.legend()
 plt.show()
 
@@ -107,12 +107,12 @@ obs_xyY = [rgb_to_xyY(rgb) for rgb in observed_rgbs_list]
 fig = plt.figure(figsize=(10, 8))
 ax = fig.add_subplot(111, projection='3d')
 
-# Plot input and observed points
-for inp, obs in zip(input_xyY, obs_xyY):
-    # Arrow from input to observed
-    ax.quiver(inp[0], inp[1], inp[2],
-              obs[0]-inp[0], obs[1]-inp[1], obs[2]-inp[2],
-              arrow_length_ratio=0.1, color='gray', linewidth=1)
+# # Plot input and observed points
+# for inp, obs in zip(input_xyY, obs_xyY):
+#     # Arrow from input to observed
+#     ax.quiver(inp[0], inp[1], inp[2],
+#               obs[0]-inp[0], obs[1]-inp[1], obs[2]-inp[2],
+#               arrow_length_ratio=0.1, color='gray', linewidth=1)
 
 # Also scatter the points for clarity
 x_in, y_in, Y_in = zip(*input_xyY)

@@ -6,13 +6,17 @@ import math
 import os
 from PIL import Image
 from datetime import datetime
+from colormath.color_objects import LabColor, sRGBColor, LCHabColor
+from colormath.color_conversions import convert_color
+import correct_color_RGBW
 
 
-using_pi = True
+
+using_pi = False
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 5 #minutes
+day_length = 0.1 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -34,8 +38,8 @@ if using_pi:
     camera.start(show_preview=False)
     
 canvas_size = 500
-feed_preview_size = 100
-color_swatch_size = 50
+feed_preview_size = 120
+color_swatch_size = 40
 
 text_color = (127, 127, 127)
 font = cv2.FONT_HERSHEY_SIMPLEX  # Font type
@@ -44,6 +48,12 @@ thickness = 1  # Thickness of the text
 
 previous_img = None
 
+def get_chroma(rgba): 
+    # how saturated or vivid one color is 
+    rgb = rgba[:3]
+    rgb_scaled = sRGBColor(*[v / 255 for v in rgb], is_upscaled=False)
+    lab = convert_color(rgb_scaled, LabColor)
+    return (lab.lab_a ** 2 + lab.lab_b ** 2) ** 0.5
 
 def resize_to_max(image, resize_max):
 
@@ -59,11 +69,11 @@ def resize_to_max(image, resize_max):
 
 class Trace:
     def __init__(self, main_color, traces_storing_mode="single", supplemental_colors=None):
-        self.main_color = np.array(main_color)
+        self.main_color = np.array(main_color[:3])
         self.traces_storing_mode = traces_storing_mode
         self.supplemental_colors = []
         if traces_storing_mode != "single":
-            self.supplemental_colors = np.array(supplemental_colors)
+            self.supplemental_colors = np.array(supplemental_colors)[:, :3]
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def print_trace(self):
@@ -105,7 +115,7 @@ def capture_image():
 
 def dominantColor(waitTime):
     # time.sleep(waitTime)
-    global previous_img
+    global previous_img, stored_traces
     if previous_img is None:
         previous_img = capture_image()
         print("taking first picture")
@@ -126,19 +136,55 @@ def dominantColor(waitTime):
     cv2.imwrite('previm.png', previous_img)
 
     # current_img = cv2.resize(current_img, (480, 360))
+    #--------------------compare clusters directly--------------------------------------------
+    # stop after 10 iterations or when EPS(change in cluster centers) is less than 0.2
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 0.2)
+    k = 5
+    _, label, center = cv2.kmeans(previous_img.astype(np.float32).reshape(1, -1, 3), k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    label= np.reshape(label, label.size)
+    label_counts = np.bincount(label)
+    sorted_indices = np.argsort(-label_counts)
+    # Sort center and label_counts accordingly
+    previous_centers = center[sorted_indices]
+
+    _, label, center = cv2.kmeans(current_img.astype(np.float32).reshape(1, -1, 3), k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    # print(current_img.astype(np.float32).shape)
+    # print(center.shape)
+    label= np.reshape(label, label.size)
+    label_counts = np.bincount(label)
+    sorted_indices = np.argsort(-label_counts)
+    # Sort center and label_counts accordingly
+    current_centers = center[sorted_indices]
+    # print(current_centers.shape)
+
+    cost_matrix = np.zeros((k, k))
+    for i, pc in enumerate(previous_centers):
+        for j, cc in enumerate(current_centers):
+            print(pc, cc)
+            prev_lab_color = correct_color_RGBW.rgb_to_lab(pc)
+            curr_lab_color = correct_color_RGBW.rgb_to_lab(cc)
+            dist = np.linalg.norm(np.array(prev_lab_color)-np.array(curr_lab_color))
+            # print(dist)
+            cost_matrix[i, j] = dist
+
+    
+    closest_color_ids = np.argmin(cost_matrix, axis=0)
+    
+    color_max_distance = 0
+    cluster_id = 0
+    for new_i, prev_i in enumerate(closest_color_ids):
+        if cost_matrix[prev_i, new_i] > color_max_distance:
+            color_max_distance = cost_matrix[prev_i, new_i]
+            cluster_id = new_i
+            
+    cluster_color = np.array([current_centers[cluster_id][0], current_centers[cluster_id][1], current_centers[cluster_id][2], 255]).round()
+    print("cluster_color", cluster_color)
 
 #-------------------------Backgorund Substraction-----------------------------------
     # Compare with the previous image
     diff1=cv2.subtract(current_img,previous_img)
     diff2=cv2.subtract(previous_img,current_img)
     diff = diff1+diff2
-
-
-    # cv2.imshow("previous", previous_img)
-    # cv2.imshow("current", current_img)
-    # cv2.waitKey(1)  # Refresh the window
-
-    
 
     #adjustable threshold value original value =13
     diff[abs(diff)<13]=0
@@ -147,7 +193,6 @@ def dominantColor(waitTime):
     gray = cv2.cvtColor(diff.astype(np.uint8), cv2.COLOR_RGB2GRAY) #rgb?
     gray[np.abs(gray) < 5] = 0
     fgmask = gray.astype(np.uint8)
-
 
 
     # morphological closing operation using ellipse
@@ -161,7 +206,10 @@ def dominantColor(waitTime):
 
     cv2.imwrite('substract.png', fgimg)
     #-------------------------Color Detection-----------------------------------
-
+    largest_color = np.array([0, 0, 0, 0])
+    expressible_color = np.array([0, 0, 0, 0])
+    vibrant_color = np.array([0, 0, 0, 0])
+    
     # image_rgb = cv2.cvtColor(fgimg,cv2.COLOR_BGR2RGB) #convert to RGB image
     image_rgb = fgimg
     # cv2.imshow("image-rgb", image_rgb)
@@ -172,7 +220,11 @@ def dominantColor(waitTime):
     # print(f"background removed : {imgNoB}")
 
     if len(imgNoB.flatten()) <= 10: #needs to be greater than K
-        return np.array([255, 255, 255, 0])
+        # <largest> Largest cluster in diff [same as now]
+        # <expressible> Closest to expressible neopixel space in diff
+        # <vibrant> Most vibrant color in diff 
+        # <cluster> Largest change in cluster
+        return np.array([0, 0, 0, 0]),  np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]), cluster_color
     
     imgNoB = imgNoB[np.newaxis, :, :]
     # if color_mode == "lab":
@@ -206,17 +258,35 @@ def dominantColor(waitTime):
 
         print("centers", list(enumerate(center)))
         for idx, color in enumerate(center_sorted):
-            # plt.subplot(1, k, idx+1)
-            # plt.axis('off')
-            # plt.imshow([[color / 255]])  # Normalize RGB values to range [0,1]
-            # plt.title(f'%{(100*label_counts_sorted[idx]/imgNoB.shape[0]):.2f}')
-            # alpha = 255 * label_counts_sorted[idx] / imgNoB.shape[0]
             alpha = 255
             rgb_color = cv2.cvtColor(np.array([[color]]).astype(np.uint8), cv2.COLOR_LAB2RGB)[0][0]
             DominantColors[idx] = list(rgb_color) + [alpha]  
             print(idx, color, rgb_color)
-        print("selected dominant color", DominantColors[0])
 
+        vr_chosen_id = 0
+        max_chromma = 0
+        px_chosen_id = 0
+        min_distance = 100000
+        for i, rgba_color in enumerate(DominantColors):
+            chroma = get_chroma(rgba_color)
+            if chroma >= max_chromma:
+                max_chromma = chroma
+                vr_chosen_id = i
+            distance_from_observed = correct_color_RGBW.find_distance(rgba_color)
+            if distance_from_observed < min_distance:
+                min_distance = distance_from_observed
+                px_chosen_id = i
+
+        vibrant_color = DominantColors[vr_chosen_id]
+        largest_color = DominantColors[0]
+        expressible_color = DominantColors[px_chosen_id]
+        print("selected largest color", largest_color)
+        print("selected vibrant color", vibrant_color)
+        print("selected expressible color", expressible_color)
+
+        trace = Trace(largest_color, traces_storing_mode="levc", supplemental_colors=[expressible_color, vibrant_color, cluster_color])
+        stored_traces.append(trace)
+        storage_file.writelines([trace.print_trace()])
 
         # display some stuff
         canvas = np.ones((500, 500, 3)).astype(np.uint8)
@@ -238,34 +308,52 @@ def dominantColor(waitTime):
             canvas[y_min:y_min+color_swatch_size, feed_preview_x:feed_preview_x+color_swatch_size] = bgr_color
             canvas = cv2.putText(canvas, f'count {count}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
         
-        # if using_pi:
-        #    canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR) #why??
+        for i, trace in enumerate(stored_traces):
+            swatch = trace.paint_trace()
+            sh, sw = swatch.shape[:-1]
+            y_min = i*color_swatch_size
+            x_min = feed_preview_x+feed_preview_size*2
+            if y_min+sh <= len(canvas):
+                canvas[y_min: y_min+sh, x_min:x_min+sw] = swatch
+            else:
+                # clear "stored" traces used in diagonstic visualization
+                stored_traces = []
             
         cv2.imshow('frame', canvas)
 
         
     except:
-        DominantColors[0]=[255, 255, 255, 0]
+        largest_color = np.array([0, 0, 0, 0]).astype(np.uint8)
+        expressible_color = np.array([0, 0, 0, 0]).astype(np.uint8)
+        vibrant_color = np.array([0, 0, 0, 0]).astype(np.uint8)
 
-    trace = Trace(list(DominantColors[0].round()))
-    stored_traces.append(trace)
-    storage_file.writelines([trace.print_trace()])
+
+
 
     if using_pi:
-        for row, trace in enumerate(stored_traces[::-1]):
-            if row >= len(neopixel_grid[0]):
-                break
+        # for row, trace in enumerate(stored_traces[::-1]):
+        #     if row >= len(neopixel_grid[0]):
+        #         break
+        #     for i in neopixel_grid[:, row]:
+        #         neopixels[i] = trace.supplemental_colors[0]
+        neopixels.fill(correct_color_RGBW.correct_color(expressible_color))
+
+        for row in range(4):
             for i in neopixel_grid[:, row]:
-                neopixels[i] = trace.main_color
+                neopixels[i] = expressible_color
 
-    return DominantColors[0].round()
+    # <largest> Largest cluster in diff [same as now]
+    # <expressible> Closest to expressible neopixel space in diff
+    # <vibrant> Most vibrant color in diff 
+    # <cluster> Largest change in cluster
+    return largest_color, expressible_color, vibrant_color, cluster_color
 
 
-def saveColor(color_array):
+def saveColor(color_array, filename = "archive.png"):
     color = tuple(map(int, color_array))
     # print(color)
-    if os.path.exists("archive.png"):
-        img = Image.open("archive.png")
+    if os.path.exists(filename):
+        img = Image.open(filename)
         existing_pixels = [px for px in img.getdata() if px != (0, 0, 0, 0)]
     else:
         existing_pixels = []
@@ -289,9 +377,7 @@ def saveColor(color_array):
     # Create new image with calculated size
     img = Image.new("RGBA", (columns, rows))
     img.putdata(existing_pixels)
-    img.save("archive.png")
-
-
+    img.save(filename)
 
 cap = None
 if not using_pi:
@@ -309,9 +395,13 @@ memory_color = None
 stored_traces = []
 
 while True:
-    color = dominantColor(day_length*60) #time in seconds
-    print(color)
-    saveColor(color)
+    largest_color, expressible_color, vibrant_color, cluster_color = dominantColor(day_length*60) #time in seconds
+    print("color profile: largest_color, expressible_color, vibrant_color, cluster_color")
+    print(largest_color, expressible_color, vibrant_color, cluster_color)
+    saveColor(largest_color, filename = "archive_largest.png")
+    saveColor(expressible_color, filename = "archive_expressible.png")
+    saveColor(vibrant_color, filename = "archive_vibrant.png")
+    saveColor(cluster_color, filename = "archive_cluster.png")
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
