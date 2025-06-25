@@ -84,8 +84,8 @@ def correct_color(target_rgba):
 
     query_point = rgb_to_lab_normalized(target_rgba[:3])
     pixel_input = inverse_model.predict([query_point])[0]
-    pixel_input = (np.clip(pixel_input, 0, 1)*255).astype(np.int8)
-    return pixel_input
+    pixel_input = (np.clip(pixel_input, 0, 1)*255).round()
+    return (int(pixel_input[0]), int(pixel_input[1]) , int(pixel_input[2]), int(pixel_input[3]))
 
 if __name__ == "__main__":
     # desired_lab = normalize_lab((70, 30, 15))

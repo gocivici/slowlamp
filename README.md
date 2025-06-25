@@ -5,6 +5,8 @@ Hi, this is the slow lamp project.
 - source venvname/bin/activate
 - pip install -U scikit-learn
 - pip install colormath
+- colour-science
+- adafruit-circuitpython-as7341
 
 
 - sudo apt install gh

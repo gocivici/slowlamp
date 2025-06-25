@@ -12,11 +12,11 @@ import correct_color_RGBW
 
 
 
-using_pi = False
+using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 0.1 #minutes
+day_length = 2 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -336,11 +336,11 @@ def dominantColor(waitTime):
         #         break
         #     for i in neopixel_grid[:, row]:
         #         neopixels[i] = trace.supplemental_colors[0]
-        neopixels.fill(correct_color_RGBW.correct_color(expressible_color))
+        neopixels.fill(correct_color_RGBW.correct_color(vibrant_color))
 
         for row in range(4):
             for i in neopixel_grid[:, row]:
-                neopixels[i] = expressible_color
+                neopixels[i] = vibrant_color
 
     # <largest> Largest cluster in diff [same as now]
     # <expressible> Closest to expressible neopixel space in diff
