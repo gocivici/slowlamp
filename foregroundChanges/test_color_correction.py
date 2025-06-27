@@ -21,10 +21,10 @@ for r in list(range(0, 255, 64))+[255]:
 			target_rgb = (r, g, b)
 			print("target_rgb", target_rgb)
 			
-			correct_rgbw =  correct_color_RGBW.correct_color(target_rgb)
-			print("correct_rgbw", correct_rgbw)
+			# correct_rgbw =  correct_color_RGBW.correct_color(target_rgb)
+			# print("correct_rgbw", correct_rgbw)
 
-			neopixels.fill(correct_rgbw)
+			neopixels.fill(target_rgb)
 
 			canvas = np.ones((500, 500, 3)).astype(np.uint8)
 			canvas[:, :, 0] = target_rgb[2]
@@ -33,11 +33,11 @@ for r in list(range(0, 255, 64))+[255]:
 
 			cv2.imshow('frame', canvas)
 
-			cv2.waitKey(0)
-
-			neopixels.fill(target_rgb)
-
 			res = cv2.waitKey(0)
+
+			# neopixels.fill(target_rgb)
+
+			# res = cv2.waitKey(0)
 			
 			if res == ord('q'):
 				break

@@ -20,10 +20,12 @@ sensor = AS7341(i2c)
 import board
 import neopixel
 
-neopixels = neopixel.NeoPixel(board.D12, 24, brightness=0.2, pixel_order = neopixel.GRBW)
+neopixels = neopixel.NeoPixel(board.D12, 24, brightness=1, pixel_order = neopixel.GRBW)
 
-neopixels.fill((255, 255, 0))
+neopixels.fill((255, 70, 98))
 
+# observer_start = 360 #nm
+# observer_end = 830 #nm
 
 sensor_wavelengths = np.array([415, 445, 480, 515, 555, 590, 630, 680])
 cmfs = colour.MSDS_CMFS['CIE 1931 2 Degree Standard Observer'] 
@@ -74,6 +76,12 @@ while True:
     rgb_color = convert_color(xyz_color, sRGBColor)
     r, g, b = rgb_color.get_upscaled_value_tuple()
     
+    if r > 255 or g > 255 or b > 255:
+        max_val = max(r, max(g, b))
+        r = int(r*255/max_val)
+        g = int(g*255/max_val)
+        b = int(b*255/max_val)
+		
     print("sensed rgb", r, g, b)
     
     canvas = np.ones((500, 500, 3)).astype(np.uint8)
