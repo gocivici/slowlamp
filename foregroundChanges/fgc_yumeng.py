@@ -12,11 +12,11 @@ import correct_color_RGBW
 
 
 
-using_pi = True
+using_pi = False
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 2 #minutes
+day_length = 0.2 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -206,9 +206,9 @@ def dominantColor(waitTime):
 
     cv2.imwrite('substract.png', fgimg)
     #-------------------------Color Detection-----------------------------------
-    largest_color = np.array([0, 0, 0, 0])
-    expressible_color = np.array([0, 0, 0, 0])
-    vibrant_color = np.array([0, 0, 0, 0])
+    largest_color = np.array([255, 255, 255, 0])
+    expressible_color = np.array([255, 255, 255, 0])
+    vibrant_color = np.array([255, 255, 255, 0])
     
     # image_rgb = cv2.cvtColor(fgimg,cv2.COLOR_BGR2RGB) #convert to RGB image
     image_rgb = fgimg
@@ -224,7 +224,7 @@ def dominantColor(waitTime):
         # <expressible> Closest to expressible neopixel space in diff
         # <vibrant> Most vibrant color in diff 
         # <cluster> Largest change in cluster
-        return np.array([0, 0, 0, 0]),  np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]), cluster_color
+        return (np.array([255, 255, 255, 0]), 0),  (np.array([255, 255, 255, 0]), 0), (np.array([255, 255, 255, 0]), 0), (cluster_color, 0)
     
     imgNoB = imgNoB[np.newaxis, :, :]
     # if color_mode == "lab":
@@ -242,7 +242,7 @@ def dominantColor(waitTime):
     k = 5 # number of clusters
     previous_img = current_img
     #Apply the K-Means clustering
-    DominantColors = np.array([[0, 0, 0, 0]] * k)
+    DominantColors = np.array([[255, 255, 255, 0]] * k)
 
     try:
         ret, label, center = cv2.kmeans(imgNoB, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
@@ -264,14 +264,16 @@ def dominantColor(waitTime):
             print(idx, color, rgb_color)
 
         vr_chosen_id = 0
+        vr_count = 0
         max_chromma = 0
         px_chosen_id = 0
         min_distance = 100000
-        for i, rgba_color in enumerate(DominantColors):
+        for i, (count, rgba_color) in enumerate(zip(label_counts_sorted, DominantColors)):
             chroma = get_chroma(rgba_color)
             if chroma >= max_chromma:
                 max_chromma = chroma
                 vr_chosen_id = i
+                vr_count = count
             distance_from_observed = correct_color_RGBW.find_distance(rgba_color)
             if distance_from_observed < min_distance:
                 min_distance = distance_from_observed
@@ -279,9 +281,10 @@ def dominantColor(waitTime):
 
         vibrant_color = DominantColors[vr_chosen_id]
         largest_color = DominantColors[0]
+        lg_count = label_counts_sorted[0]
         expressible_color = DominantColors[px_chosen_id]
-        print("selected largest color", largest_color)
-        print("selected vibrant color", vibrant_color)
+        print("selected largest color", largest_color, "with", lg_count)
+        print("selected vibrant color", vibrant_color, "with", vr_count)
         print("selected expressible color", expressible_color)
 
         trace = Trace(largest_color, traces_storing_mode="levc", supplemental_colors=[expressible_color, vibrant_color, cluster_color])
@@ -323,9 +326,9 @@ def dominantColor(waitTime):
 
         
     except:
-        largest_color = np.array([0, 0, 0, 0]).astype(np.uint8)
-        expressible_color = np.array([0, 0, 0, 0]).astype(np.uint8)
-        vibrant_color = np.array([0, 0, 0, 0]).astype(np.uint8)
+        largest_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        expressible_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        vibrant_color = np.array([255, 255, 255, 0]).astype(np.uint8)
 
 
 
@@ -346,7 +349,7 @@ def dominantColor(waitTime):
     # <expressible> Closest to expressible neopixel space in diff
     # <vibrant> Most vibrant color in diff 
     # <cluster> Largest change in cluster
-    return largest_color, expressible_color, vibrant_color, cluster_color
+    return (largest_color, lg_count), (expressible_color, 0), (vibrant_color, vr_count), (cluster_color, 0)
 
 
 def saveColor(color_array, filename = "archive.png"):
@@ -379,6 +382,25 @@ def saveColor(color_array, filename = "archive.png"):
     img.putdata(existing_pixels)
     img.save(filename)
 
+
+def saveComposition(largest_color_count, vibrant_color_count, file_prefix = "composition_"):
+    filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    image_file = f"{file_prefix}{filename_time}.png"
+    lg_color, lg_count = largest_color_count
+    vr_color, vr_count = vibrant_color_count
+    vr_percent = vr_count/(lg_count+vr_count)
+    img_size = 100
+    radius = int(np.sqrt(vr_percent*img_size**2/np.pi).round())
+    canvas = np.ones((img_size, img_size, 4)).astype(np.uint8)
+    canvas[:, :, 0] = lg_color[2]
+    canvas[:, :, 1] = lg_color[1]
+    canvas[:, :, 2] = lg_color[0]
+    canvas[:, :, 3] = lg_color[3]
+    print(vr_color, vr_count)
+    canvas = cv2.circle(canvas, (img_size//2, img_size//2), radius, 
+                        (int(vr_color[2]), int(vr_color[1]), int(vr_color[0]), int(vr_color[3])), thickness=-1)
+    cv2.imwrite(image_file, canvas)
+
 cap = None
 if not using_pi:
     # Initialize the camera module
@@ -398,10 +420,11 @@ while True:
     largest_color, expressible_color, vibrant_color, cluster_color = dominantColor(day_length*60) #time in seconds
     print("color profile: largest_color, expressible_color, vibrant_color, cluster_color")
     print(largest_color, expressible_color, vibrant_color, cluster_color)
-    saveColor(largest_color, filename = "archive_largest.png")
-    saveColor(expressible_color, filename = "archive_expressible.png")
-    saveColor(vibrant_color, filename = "archive_vibrant.png")
-    saveColor(cluster_color, filename = "archive_cluster.png")
+    saveColor(largest_color[0], filename = "archive_largest.png")
+    # saveColor(expressible_color, filename = "archive_expressible.png")
+    saveColor(vibrant_color[0], filename = "archive_vibrant.png")
+    # saveColor(cluster_color, filename = "archive_cluster.png")
+    saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

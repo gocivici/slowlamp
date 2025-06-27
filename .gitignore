@@ -1,4 +1,6 @@
 __pycache__/
 *.npz
+!pairings-32-GRBW.npz
 storage.txt
 *_storage.txt
+composition_*
