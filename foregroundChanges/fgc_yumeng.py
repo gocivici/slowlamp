@@ -12,11 +12,11 @@ import correct_color_RGBW
 
 
 
-using_pi = False
+using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 0.2 #minutes
+day_length = 40 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -131,8 +131,9 @@ def dominantColor(waitTime):
     curr_preview = resize_to_max(current_img, feed_preview_size)
 
     print("taking second picture")
-
-    cv2.imwrite('curim.png', current_img)
+    
+    current_img_bgr = cv2.cvtColor(current_img, cv2.COLOR_RGB2BGR )
+    cv2.imwrite('curim.png', current_img_bgr)
     cv2.imwrite('previm.png', previous_img)
 
     # current_img = cv2.resize(current_img, (480, 360))
@@ -388,17 +389,26 @@ def saveComposition(largest_color_count, vibrant_color_count, file_prefix = "com
     image_file = f"{file_prefix}{filename_time}.png"
     lg_color, lg_count = largest_color_count
     vr_color, vr_count = vibrant_color_count
-    vr_percent = vr_count/(lg_count+vr_count)
     img_size = 100
-    radius = int(np.sqrt(vr_percent*img_size**2/np.pi).round())
     canvas = np.ones((img_size, img_size, 4)).astype(np.uint8)
-    canvas[:, :, 0] = lg_color[2]
-    canvas[:, :, 1] = lg_color[1]
-    canvas[:, :, 2] = lg_color[0]
-    canvas[:, :, 3] = lg_color[3]
-    print(vr_color, vr_count)
-    canvas = cv2.circle(canvas, (img_size//2, img_size//2), radius, 
-                        (int(vr_color[2]), int(vr_color[1]), int(vr_color[0]), int(vr_color[3])), thickness=-1)
+    
+    if lg_count == 0:
+        canvas[:, :, 0] = 255
+        canvas[:, :, 1] = 255
+        canvas[:, :, 2] = 255
+        canvas[:, :, 3] = 0
+    else:
+        vr_percent = vr_count/(lg_count+vr_count)
+        
+        radius = max(5, int(np.sqrt(vr_percent*img_size**2/np.pi).round()))
+        canvas[:, :, 0] = lg_color[2]
+        canvas[:, :, 1] = lg_color[1]
+        canvas[:, :, 2] = lg_color[0]
+        canvas[:, :, 3] = lg_color[3]
+        # print(vr_color, vr_count)
+        canvas = cv2.circle(canvas, (img_size//2, img_size//2), radius, 
+                            (int(vr_color[2]), int(vr_color[1]), int(vr_color[0]), int(vr_color[3])), thickness=-1)
+                            
     cv2.imwrite(image_file, canvas)
 
 cap = None
