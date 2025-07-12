@@ -36,7 +36,7 @@ if using_pi:
 
     picam2.set_controls({'AwbEnable': False})
     picam2.set_controls({'AeEnable': False})
-    picam2.set_controls({'AnalogueGain': 15.0, 'ExposureTime': 10000})
+    picam2.set_controls({'AnalogueGain': 5.0, 'ExposureTime': 5000})
 
     picam2.start()
 
@@ -47,21 +47,9 @@ pixel_colors = []
 # 		for b in range(0, 255, 10):
 # 			pixel_colors.append( (r, g, b))
 
-pixel_colors.append( (0, 0, 0))
-
-pixel_colors.append( (255, 0, 0))
-pixel_colors.append( (0, 255, 0))
-pixel_colors.append( (0, 0, 255))
-
-pixel_colors.append( (255, 255, 0))
-pixel_colors.append( (0, 255, 255))
-pixel_colors.append( (255, 0, 255))
-
-pixel_colors.append( (255, 255, 255))
-
-for r in range(0, 255, 32):
-	for g in range(0, 255, 32):
-		for b in range(0, 255, 32):
+for r in list(range(0, 255, 32))+[255]:
+	for g in list(range(0, 255, 32))+[255]:
+		for b in list(range(0, 255, 32))+[255]:
 			pixel_colors.append( (r, g, b))
 
 with_white = []
@@ -185,4 +173,4 @@ if not using_pi:
 else:
     pixels.fill((0, 0, 0, 0))
 
-np.savez("pairings-32-GRBW.npz", pixel_colors = with_white, result_colors = result_colors)
+np.savez("pairings-32-tr4w2.npz", pixel_colors = with_white, result_colors = result_colors)
