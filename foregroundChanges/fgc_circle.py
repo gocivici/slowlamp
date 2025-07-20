@@ -12,11 +12,11 @@ import correct_color_RGBW
 
 
 
-using_pi = False
+using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 0.1 #minutes
+day_length = 60 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -136,8 +136,10 @@ def dominantColor(waitTime):
     curr_preview = resize_to_max(current_img, feed_preview_size)
 
     print("taking second picture")
-
-    cv2.imwrite('curim.png', current_img)
+    
+        
+    current_img_bgr = cv2.cvtColor(current_img, cv2.COLOR_RGB2BGR )
+    cv2.imwrite('curim.png', current_img_bgr)
     cv2.imwrite('previm.png', previous_img)
 
     # current_img = cv2.resize(current_img, (480, 360))
@@ -229,7 +231,15 @@ def dominantColor(waitTime):
         # <expressible> Closest to expressible neopixel space in diff
         # <vibrant> Most vibrant color in diff 
         # <cluster> Largest change in cluster
-        return (np.array([255, 255, 255, 0]), 0),  (np.array([255, 255, 255, 0]), 0), (np.array([255, 255, 255, 0]), 0), (cluster_color, 0)
+        largest_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        expressible_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        vibrant_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        
+        trace = Trace(largest_color, traces_storing_mode="levc", supplemental_colors=[expressible_color, vibrant_color, cluster_color])
+        stored_traces.append(trace)
+        storage_file.writelines([trace.print_trace()])
+        time_elapsed = time.time() - start_time_seconds  
+        return (largest_color, 0),  (expressible_color, 0), (vibrant_color, 0), (cluster_color, 0), time_elapsed
     
     imgNoB = imgNoB[np.newaxis, :, :]
     # if color_mode == "lab":
@@ -248,9 +258,10 @@ def dominantColor(waitTime):
     previous_img = current_img
     #Apply the K-Means clustering
     DominantColors = np.array([[255, 255, 255, 0]] * k)
-
-    # try:
-    if True:
+    label_counts_sorted = [1]*k
+    
+    try:
+    # if True:
         ret, label, center = cv2.kmeans(imgNoB, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
         label= np.reshape(label, label.size)
@@ -268,85 +279,93 @@ def dominantColor(waitTime):
             rgb_color = cv2.cvtColor(np.array([[color]]).astype(np.uint8), cv2.COLOR_LAB2RGB)[0][0]
             DominantColors[idx] = list(rgb_color) + [alpha]  
             print(idx, color, rgb_color)
-
-        vr_chosen_id = 0
+        
+    except:
+        largest_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        expressible_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        vibrant_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        lg_count = 0
         vr_count = 0
-        max_chromma = 0
-        px_chosen_id = 0
-        min_distance = 100000
-        for i, (count, rgba_color) in enumerate(zip(label_counts_sorted, DominantColors)):
-            chroma = get_chroma(rgba_color)
-            if chroma >= max_chromma:
-                max_chromma = chroma
-                vr_chosen_id = i
-                vr_count = count
-            distance_from_observed = correct_color_RGBW.find_distance(rgba_color)
-            if distance_from_observed < min_distance:
-                min_distance = distance_from_observed
-                px_chosen_id = i
+    
+    
+    vr_chosen_id = 0
+    vr_count = 0
+    max_chromma = 0
+    px_chosen_id = 0
+    min_distance = 100000
+    for i, (count, rgba_color) in enumerate(zip(label_counts_sorted, DominantColors)):
+        chroma = get_chroma(rgba_color)
+        if chroma >= max_chromma:
+            max_chromma = chroma
+            vr_chosen_id = i
+            vr_count = count
+        distance_from_observed = correct_color_RGBW.find_distance(rgba_color)
+        if distance_from_observed < min_distance:
+            min_distance = distance_from_observed
+            px_chosen_id = i
 
-        vibrant_color = DominantColors[vr_chosen_id]
-        largest_color = DominantColors[0]
-        lg_count = label_counts_sorted[0]
-        expressible_color = DominantColors[px_chosen_id]
-        print("selected largest color", largest_color, "with", lg_count)
-        print("selected vibrant color", vibrant_color, "with", vr_count)
-        print("selected expressible color", expressible_color)
+    vibrant_color = DominantColors[vr_chosen_id]
+    largest_color = DominantColors[0]
+    lg_count = label_counts_sorted[0]
+    expressible_color = DominantColors[px_chosen_id]
+    print("selected largest color", largest_color, "with", lg_count)
+    print("selected vibrant color", vibrant_color, "with", vr_count)
+    print("selected expressible color", expressible_color)
 
-        trace = Trace(largest_color, traces_storing_mode="levc", supplemental_colors=[expressible_color, vibrant_color, cluster_color])
-        stored_traces.append(trace)
-        storage_file.writelines([trace.print_trace()])
+    trace = Trace(largest_color, traces_storing_mode="levc", supplemental_colors=[expressible_color, vibrant_color, cluster_color])
+    stored_traces.append(trace)
+    storage_file.writelines([trace.print_trace()])
 
-        # display some stuff
-        canvas = np.ones((500, 800, 3)).astype(np.uint8)
-        # if canvas_color is not None:
-        #     canvas[:, :, 0] = canvas_color[2]
-        #     canvas[:, :, 1] = canvas_color[1]
-        #     canvas[:, :, 2] = canvas_color[0]
-        
-        canvas[0:prev_preview.shape[0], 0:prev_preview.shape[1], ::-1] = prev_preview
-        canvas[0:curr_preview.shape[0], prev_preview.shape[1]:prev_preview.shape[1]+curr_preview.shape[1], ::-1] = curr_preview
-        canvas[prev_preview.shape[0]:prev_preview.shape[0] + diff_preview.shape[0], 0:prev_preview.shape[1], ::-1] = diff_preview
+    # display some stuff
+    canvas = np.ones((500, 800, 3)).astype(np.uint8)
+    # if canvas_color is not None:
+    #     canvas[:, :, 0] = canvas_color[2]
+    #     canvas[:, :, 1] = canvas_color[1]
+    #     canvas[:, :, 2] = canvas_color[0]
+    
+    canvas[0:prev_preview.shape[0], 0:prev_preview.shape[1], ::-1] = prev_preview
+    canvas[0:curr_preview.shape[0], prev_preview.shape[1]:prev_preview.shape[1]+curr_preview.shape[1], ::-1] = curr_preview
+    canvas[prev_preview.shape[0]:prev_preview.shape[0] + diff_preview.shape[0], 0:prev_preview.shape[1], ::-1] = diff_preview
 
-        feed_preview_y = prev_preview.shape[0] + diff_preview.shape[0]
-        feed_preview_x = 0
-        for i, (count, center) in enumerate(zip(label_counts_sorted, DominantColors)):
-            print("DominantColors (rgb) ", i, center)
-            bgr_color = [center[2], center[1], center[0]]
-            y_min = feed_preview_y + i*color_swatch_size
-            canvas[y_min:y_min+color_swatch_size, feed_preview_x:feed_preview_x+color_swatch_size] = bgr_color
-            canvas = cv2.putText(canvas, f'count {count}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
-        
-        circle_center = (190 + (800-feed_preview_size*2)//2, 250)
-        vibrant_radius = 150
-        ambient_radius = 190
-        angle_per_swatch = 360/24
-        for i, trace in enumerate(stored_traces):
-            # swatch = trace.paint_trace()
-            trace_ambient_color = to_cv2_color(trace.main_color)
-            trace_vibrant_color = to_cv2_color(trace.supplemental_colors[1])
-            canvas = cv2.ellipse(canvas,circle_center,(ambient_radius, ambient_radius), angle_per_swatch, i*angle_per_swatch, (i+1)*angle_per_swatch,
-                                 trace_ambient_color, -1)
-            canvas = cv2.ellipse(canvas,circle_center,(vibrant_radius, vibrant_radius), angle_per_swatch, i*angle_per_swatch, (i+1)*angle_per_swatch,
-                                 trace_vibrant_color, -1)
-            if i >= 23:
-                # clear "stored" traces used in diagonstic visualization
-                stored_traces = []
+    feed_preview_y = prev_preview.shape[0] + diff_preview.shape[0]
+    feed_preview_x = 0
+    for i, (count, center) in enumerate(zip(label_counts_sorted, DominantColors)):
+        print("DominantColors (rgb) ", i, center)
+        bgr_color = [center[2], center[1], center[0]]
+        y_min = feed_preview_y + i*color_swatch_size
+        canvas[y_min:y_min+color_swatch_size, feed_preview_x:feed_preview_x+color_swatch_size] = bgr_color
+        canvas = cv2.putText(canvas, f'count {count}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
+    
+    circle_center = (190 + (800-feed_preview_size*2)//2, 250)
+    vibrant_radius = 150
+    ambient_radius = 190
+    angle_per_swatch = 360/24
+    for i, trace in enumerate(stored_traces):
+        # swatch = trace.paint_trace()
+        trace_ambient_color = to_cv2_color(trace.main_color)
+        trace_vibrant_color = to_cv2_color(trace.supplemental_colors[1])
+        canvas = cv2.ellipse(canvas,circle_center,(ambient_radius, ambient_radius), angle_per_swatch, i*angle_per_swatch, (i+1)*angle_per_swatch,
+                             trace_ambient_color, -1)
+        canvas = cv2.ellipse(canvas,circle_center,(vibrant_radius, vibrant_radius), angle_per_swatch, i*angle_per_swatch, (i+1)*angle_per_swatch,
+                             trace_vibrant_color, -1)
+        if i >= 23:
+            # clear "stored" traces used in diagonstic visualization
+            stored_traces = []
 
-        current_ambient_color = to_cv2_color(largest_color)
-        current_vibrant_color =to_cv2_color(vibrant_color)
+    current_ambient_color = to_cv2_color(largest_color)
+    current_vibrant_color =to_cv2_color(vibrant_color)
 
+    if (lg_count + vr_count) == 0:
+        vr_percent = 0.1
+    else:
         vr_percent = vr_count/(lg_count+vr_count)
-        
-        canvas = cv2.circle(canvas, circle_center, vibrant_radius-40, current_ambient_color, -1)
-        canvas = cv2.circle(canvas, circle_center, int((vibrant_radius-40)*vr_percent**(0.5)), current_vibrant_color, -1)
-        cv2.imshow('frame', canvas)
+    
+    canvas = cv2.circle(canvas, circle_center, vibrant_radius-40, current_ambient_color, -1)
+    canvas = cv2.circle(canvas, circle_center, int((vibrant_radius-40)*vr_percent**(0.5)), current_vibrant_color, -1)
+    cv2.imshow('frame', canvas)
 
         
-    # except:
-        # largest_color = np.array([255, 255, 255, 0]).astype(np.uint8)
-        # expressible_color = np.array([255, 255, 255, 0]).astype(np.uint8)
-        # vibrant_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+
 
 
 
@@ -408,7 +427,10 @@ def saveComposition(largest_color_count, vibrant_color_count, file_prefix = "com
     image_file = f"{file_prefix}{filename_time}.png"
     lg_color, lg_count = largest_color_count
     vr_color, vr_count = vibrant_color_count
-    vr_percent = vr_count/(lg_count+vr_count)
+    if (lg_count + vr_count) == 0:
+        vr_percent = 0.1
+    else:
+        vr_percent = vr_count/(lg_count+vr_count)
     img_size = 100
     radius = int(np.sqrt(vr_percent*img_size**2/np.pi).round())
     canvas = np.ones((img_size, img_size, 4)).astype(np.uint8)
