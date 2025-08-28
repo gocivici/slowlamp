@@ -127,15 +127,15 @@ for i in range(start_day, end_day):
             am_color = sunrise_ambient_colors[color_choice]
             vr_color = sunrise_vibrant_colors[color_choice]
         elif hour > sunrise_hour + 1 and hour < dark_hour - 1: 
-            color_choice = np.random.randint(0, len(sunrise_ambient_colors))
+            color_choice = np.random.randint(0, len(day_ambient_colors))
             am_color = day_ambient_colors[color_choice]
             vr_color = day_vibrant_colors[color_choice]
         elif abs(hour - dark_hour)<=1: 
-            color_choice = np.random.randint(0, len(sunrise_ambient_colors))
+            color_choice = np.random.randint(0, len(sunset_ambient_colors))
             am_color = sunset_ambient_colors[color_choice]
             vr_color = sunset_vibrant_colors[color_choice]
         else:
-            color_choice = np.random.randint(0, len(sunrise_ambient_colors))
+            color_choice = np.random.randint(0, len(night_ambient_colors))
             am_color = night_ambient_colors[color_choice]
             vr_color = night_vibrant_colors[color_choice]
 

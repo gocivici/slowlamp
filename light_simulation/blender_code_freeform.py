@@ -20,17 +20,24 @@ bpy.context.scene.camera = camera
 #lamp2.data.energy = 500  # make it visible
 
 
-# 1. Create a 2D grid of lights
-grid_rows, grid_cols = 11, 11
+# 1. Create lights
 lights = []
-for y in range(grid_rows):
-    for x in range(grid_cols):
-        bpy.ops.object.light_add(type='POINT', location=(x * 2.0/grid_cols*5 +0.5/grid_cols*5 - 5, y * 2.0/grid_rows*5 +0.5/grid_cols*5 - 5, 2))
-        light = bpy.context.view_layer.objects.active
-        light.name = f"Light_{x}_{y}"
-        light.data.energy = 1000
-        lights.append(light)
-        
+with open("C:/work/slow_lamp/light_simulation/coordinates_freeform.csv", newline='') as csvfile:
+    reader = csv.reader(csvfile)
+    header = next(reader)  # skip header
+
+    for row in reader:
+        for i in range(0, len(row), 3):
+            index = (i) // 3
+            x = float(row[i])
+            y = float(row[i + 1])
+            z = float(row[i + 2])
+            bpy.ops.object.light_add(type='POINT', location=(x, y, z))
+            light = bpy.context.view_layer.objects.active
+            light.name = f"Light_{index}"
+            light.data.energy = 1000
+            lights.append(light)
+                
 # 2. Create a name map for lookup
 lights_by_name = {light.name: light for light in lights}
 
@@ -59,11 +66,18 @@ def animate_from_csv(filepath):
         return frame
 
 # 🔁 Call the animation function with your CSV path
-csv_path = "C:/work/slow_lamp/light_simulation/animation_plan_11x11.csv"  # ← change this
+csv_path = "C:/work/slow_lamp/light_simulation/animation_plan_freeform.csv"  # ← change this
 end_frame = animate_from_csv(csv_path)
 
 # Add a plane (so we can see the light effect)
-bpy.ops.mesh.primitive_plane_add(size=11, location=(-0.5, -0.5, 0))
+# bpy.ops.mesh.primitive_plane_add(size=11, location=(-0.5, -0.5, 0))
+
+# Basic circular plane (filled circle)
+bpy.ops.mesh.primitive_circle_add(
+    radius= 6,                    # Half of your desired diameter (11/2)
+    location=(0, 0, 0),
+    fill_type='TRIFAN'           # Creates a filled circle
+)
 
 # Set frame rate and duration
 scene = bpy.context.scene
@@ -101,7 +115,7 @@ scene.render.fps = 15
 
 # Set render settings
 scene.render.image_settings.file_format = 'FFMPEG'
-scene.render.filepath = "//color_change_lamp_11x11.mp4"
+scene.render.filepath = "//color_change_lamp_freeform.mp4"
 scene.render.ffmpeg.format = 'MPEG4'
 scene.render.ffmpeg.codec = 'H264'
 scene.render.ffmpeg.constant_rate_factor = 'MEDIUM'

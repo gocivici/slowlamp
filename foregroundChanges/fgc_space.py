@@ -12,11 +12,11 @@ import correct_color_RGBW
 
 
 
-using_pi = False
+using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 0.1 #minutes
+day_length = 60 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -272,13 +272,13 @@ def dominantColor(waitTime):
 
     other_colors = []
     other_counts = []
-    for i in range(1, len(DominantColors)):
+    for i in range(0, len(DominantColors)):
         if i != vr_chosen_id:
             other_colors.append(DominantColors[i])
             other_counts.append(label_counts_sorted[i])
     trace = Trace(vibrant_color, count = vr_count, traces_storing_mode="vaooo", 
-                    supplemental_colors=[largest_color]+other_colors,
-                    supplemental_counts = [lg_count]+other_counts)
+                    supplemental_colors = other_colors,
+                    supplemental_counts = other_counts)
     stored_traces.append(trace)
     storage_file.writelines([trace.print_trace()])
     storage_file.flush()
