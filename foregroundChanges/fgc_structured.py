@@ -6,9 +6,9 @@ import math
 import os
 from PIL import Image
 from datetime import datetime
-from colormath.color_objects import LabColor, sRGBColor, LCHabColor
+from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
-import correct_color_RGBW
+# import correct_color_RGBW
 from scipy.spatial.distance import cdist
 
 
@@ -22,11 +22,11 @@ filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
 if using_pi:
-    import board
-    import neopixel
-    neopixels = neopixel.NeoPixel(board.D12, 24, brightness=0.2, pixel_order = neopixel.GRBW)
+    # import board
+    # import neopixel
+    # neopixels = neopixel.NeoPixel(board.D12, 24, brightness=0.2, pixel_order = neopixel.GRBW)
 
-    neopixel_grid = np.array([np.arange(8), 8+np.arange(8)[::-1], 16+np.arange(8)])
+    # neopixel_grid = np.array([np.arange(8), 8+np.arange(8)[::-1], 16+np.arange(8)])
 
     #------------------------Camera Setup---------------------------------------
     from picamera2 import Picamera2
@@ -369,7 +369,8 @@ def dominantColor(waitTime):
         #         break
         #     for i in neopixel_grid[:, row]:
         #         neopixels[i] = trace.supplemental_colors[0]
-        neopixels.fill(correct_color_RGBW.correct_color(vibrant_color))
+        # neopixels.fill(correct_color_RGBW.correct_color(vibrant_color))
+        pass
 
         # for row in range(4):
         #     for i in neopixel_grid[:, row]:
@@ -468,8 +469,8 @@ while True:
 if not using_pi:
     # Release the camera resources
     cap.release()
-else:
-    neopixels.fill( (0, 0, 0))
+# else:
+    # neopixels.fill( (0, 0, 0))
     
 cv2.destroyAllWindows()
 storage_file.flush()
