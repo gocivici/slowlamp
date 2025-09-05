@@ -147,6 +147,8 @@ def dominantColor(waitTime):
         
     current_img_bgr = cv2.cvtColor(current_img, cv2.COLOR_RGB2BGR )
     cv2.imwrite('curim.png', current_img_bgr)
+    filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    cv2.imwrite(f'curim_{filename_time}.png', current_img_bgr)
     cv2.imwrite('previm.png', previous_img)
 
 #-------------------------Backgorund Substraction-----------------------------------
