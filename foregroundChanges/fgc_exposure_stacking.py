@@ -39,8 +39,8 @@ if using_pi:
     # camera.start(show_preview=False)
     config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 4}) #DaylightMode
     camera.configure(config) 
-    exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000]
-    
+    exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
+
 canvas_size = 500
 feed_preview_size = 120
 color_swatch_size = 40
@@ -119,14 +119,15 @@ def capture_image():
         for exp in exposure_time: 
             camera.set_controls({"ExposureTime": exp, "AnalogueGain": 1.0}) 
             camera.start()
-            file_name = f"frame_" + {exp} + ".jpg"
+            file_name = f"frame_{exp}.jpg"
             frame_plain = camera.capture_array()
             frames.append(frame_plain)
             cv2.imwrite(file_name, frame_plain)
             camera.stop()
 
         mergeMertens = cv2.createMergeMertens()
-        frame  = mergeMertens.process(frames)
+        fusion_res  = mergeMertens.process(frames)
+        frame = np.clip(fusion_res * 255, 0, 255).astype('uint8')
     else:
         ret, frame = cap.read()
     
@@ -147,7 +148,8 @@ def dominantColor(waitTime):
     prev_preview = resize_to_max(previous_img, feed_preview_size)
 
     print("Waiting seconds:",waitTime)
-    time.sleep(waitTime) 
+    if waitTime > 0:
+        time.sleep(waitTime) 
 
     # Get the current time in seconds since the epoch
     start_time_seconds = time.time()
@@ -258,22 +260,54 @@ def dominantColor(waitTime):
             DominantColors[idx] = list(rgb_color) + [alpha]  
             print(idx, color, rgb_color)
 
+        # fgLAB = cv2.cvtColor(fgimg, cv2.COLOR_RGB2LAB)
+        # distances = cdist(center_sorted, fgLAB.reshape(-1, 3))
+        # sorted_indices = np.argsort(distances, axis=0)
+        # Initialize sums
+        # center_of_masses_x = np.zeros(len(center_sorted))
+        # center_of_masses_y = np.zeros(len(center_sorted))
+        # center_of_masses_count = np.zeros(len(center_sorted))
+        # for y in range(fgLAB.shape[0]):
+        #     for x in range(fgLAB.shape[1]):
+        #        if np.all(fgimg[y, x] <= 0):
+        #            continue
+        #        j = y * fgLAB.shape[1] + x
+        #        assigned_center = sorted_indices[0][j]
+        #        center_of_masses_x[assigned_center] += x
+        #        center_of_masses_y[assigned_center] += y
+        #        center_of_masses_count[assigned_center] += 1
+        
+        # --- Your existing code (already vectorized) ---
         fgLAB = cv2.cvtColor(fgimg, cv2.COLOR_RGB2LAB)
         distances = cdist(center_sorted, fgLAB.reshape(-1, 3))
         sorted_indices = np.argsort(distances, axis=0)
-        # Initialize sums
-        center_of_masses_x = np.zeros(len(center_sorted))
-        center_of_masses_y = np.zeros(len(center_sorted))
-        center_of_masses_count = np.zeros(len(center_sorted))
-        for y in range(fgLAB.shape[0]):
-            for x in range(fgLAB.shape[1]):
-                if np.all(fgimg[y, x] <= 0):
-                    continue
-                j = y * fgLAB.shape[1] + x
-                assigned_center = sorted_indices[0][j]
-                center_of_masses_x[assigned_center] += x
-                center_of_masses_y[assigned_center] += y
-                center_of_masses_count[assigned_center] += 1
+
+        # --- Vectorized replacement for the loops ---
+
+        # 1. Get the assigned cluster label for each pixel (flattened)
+        labels_flat = sorted_indices[0]
+        num_centers = len(center_sorted)
+        H, W, _ = fgimg.shape
+
+        # 2. Create a boolean mask to identify non-black pixels
+        # This is the vectorized equivalent of the 'if np.all(fgimg[y, x] <= 0): continue' check.
+        mask_flat = np.any(fgimg.reshape(-1, 3) > 0, axis=1)
+
+        # 3. Generate coordinate grids for all pixels and flatten them
+        y_coords, x_coords = np.indices((H, W))
+        x_coords_flat = x_coords.ravel()
+        y_coords_flat = y_coords.ravel()
+
+        # 4. Apply the mask to keep only the data for non-black pixels
+        valid_labels = labels_flat[mask_flat]
+        valid_x_coords = x_coords_flat[mask_flat]
+        valid_y_coords = y_coords_flat[mask_flat]
+
+        # 5. Use np.bincount to efficiently sum coordinates and count pixels for each cluster
+        # This single operation replaces the entire nested loop structure.
+        center_of_masses_x = np.bincount(valid_labels, weights=valid_x_coords, minlength=num_centers)
+        center_of_masses_y = np.bincount(valid_labels, weights=valid_y_coords, minlength=num_centers)
+        center_of_masses_count = np.bincount(valid_labels, minlength=num_centers)
 
         # Avoid division by zero
         valid = center_of_masses_count > 0

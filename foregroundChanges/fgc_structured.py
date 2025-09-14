@@ -17,7 +17,7 @@ using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 60 #minutes
+day_length =  0.4 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -133,7 +133,8 @@ def dominantColor(waitTime):
     prev_preview = resize_to_max(previous_img, feed_preview_size)
 
     print("Waiting seconds:",waitTime)
-    time.sleep(waitTime) 
+    if waitTime > 0:
+        time.sleep(waitTime) 
 
     # Get the current time in seconds since the epoch
     start_time_seconds = time.time()
