@@ -1,0 +1,50 @@
+import spidev
+import time
+
+def send_hd108_colors(colors_16bit, global_brightness=15):
+    spi = spidev.SpiDev()
+    spi.open(0, 0)
+    spi.max_speed_hz = 10000000  # Stay under 32MHz limit
+    
+    data = []
+    
+    # Start frame: 128 bits of 0 (16 bytes)
+    data.extend([0x00] * 16)
+    
+    # LED data
+    for r16, g16, b16 in colors_16bit:
+        # Frame: 1 bit "1" + 15 bits brightness + 16 bits each for B,G,R
+        # Total: 64 bits = 8 bytes per LED
+        brightness_15bit = global_brightness & 0x7FFF  # 15 bits max
+        
+        # First byte: 1 + top 7 bits of brightness
+        byte1 = 0x80 | ((brightness_15bit >> 8) & 0x7F)
+        # Second byte: bottom 8 bits of brightness  
+        byte2 = brightness_15bit & 0xFF
+        
+        data.extend([
+            byte1, byte2,                               # 1 + 15 bit brightness
+            (b16 >> 8) & 0xFF, b16 & 0xFF,             # Blue 16-bit
+            (g16 >> 8) & 0xFF, g16 & 0xFF,             # Green 16-bit
+            (r16 >> 8) & 0xFF, r16 & 0xFF              # Red 16-bit
+        ])
+    
+    # End frame: 128 bits of 1 (16 bytes)
+    data.extend([0xFF] * 16)
+    
+    spi.writebytes2(data)
+    spi.close()
+
+# Test code
+test_colors = [
+    (65535, 0, 0),    # Full Red
+    (0, 65535, 0),    # Full Green
+    (0, 0, 65535),    # Full Blue
+    (65535, 65535, 0),# Full Yellow
+    (32767, 32767, 32767) # Half White
+]
+send_hd108_colors(test_colors, global_brightness=31)
+time.sleep(2)
+
+off_colors = [(0,0,0) for _ in range(len(test_colors))]
+send_hd108_colors(off_colors, global_brightness=0)
