@@ -4,7 +4,7 @@ import time
 def send_hd108_colors(colors_16bit, global_brightness=15):
     spi = spidev.SpiDev()
     spi.open(0, 0)
-    spi.max_speed_hz = 10000000
+    spi.max_speed_hz = 10000000 # 32000000 maximum
     
     data = []
     data.extend([0x00] * 16)  # Start frame
