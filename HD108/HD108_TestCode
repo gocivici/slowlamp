@@ -3,22 +3,22 @@ import time
 
 def send_hd108_colors(colors_16bit, global_brightness=15):
     spi = spidev.SpiDev()
-    spi.open(0, 0)
-    spi.max_speed_hz = 10000000 # 32000000 maximum
+    spi.open(0, 0)                                            # Open SPI bus 0, device 0
+    spi.max_speed_hz = 10000000                               # Set speed to 10MHz: 32000000 maximum
     
     data = []
-    data.extend([0x00] * 16)  # Start frame
+    data.extend([0x00] * 16)  # Start frame: HD108 protocol requires 128-bit start frame before LED data
     
     for r16, g16, b16 in colors_16bit:
-        # 5-bit brightness (0-31), not 15-bit
-        brightness_5bit = min(global_brightness, 31)
+        # 5-bit brightness (0-31)
+        brightness_5bit = min(global_brightness, 31)          # Loops through each LED's RGB values (0-65535 range) Ensures brightness stays within valid 5-bit range (0-31)
         
         # 16-bit brightness field: 1 + 5 bits brightness + 10 bits padding
         byte1 = 0x80 | (brightness_5bit << 2)
         byte2 = 0x00
         
         data.extend([
-            byte1, byte2,                               # Brightness
+            byte1, byte2,                              # Brightness
             (b16 >> 8) & 0xFF, b16 & 0xFF,             # Blue 16-bit
             (g16 >> 8) & 0xFF, g16 & 0xFF,             # Green 16-bit
             (r16 >> 8) & 0xFF, r16 & 0xFF              # Red 16-bit
