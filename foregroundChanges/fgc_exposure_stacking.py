@@ -17,7 +17,7 @@ using_pi = True
 pixel_mode = "daily" # "reactive" or "daily"
 traces_storing_mode = "complementary" # "single", "complementary", or "neighbor"
 display_matrix_mode = "gradient"
-day_length = 60 #minutes
+day_length = 0.5 #minutes
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
@@ -30,14 +30,15 @@ if using_pi:
 
     #------------------------Camera Setup---------------------------------------
     from picamera2 import Picamera2
-    camera = Picamera2()
+    tuning = Picamera2.load_tuning_file("/home/slowlamp2/Documents/slowlamp/image_proc/test.json") #imx477
+    camera = Picamera2(tuning=tuning)
     # camera.resolution= (2028,1520)
     # camera.preview_configuration.main.format = "RGB888"
     # camera.set_controls({'AnalogueGain': 25.0, 'ExposureTime': 22000})
     # camera.start()
 
     # camera.start(show_preview=False)
-    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 4}) #DaylightMode
+    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 3}) #DaylightMode=4, indoor=3
     camera.configure(config) 
     exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
 
