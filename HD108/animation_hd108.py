@@ -3,6 +3,10 @@ import numpy as np
 import spidev
 import time
 
+spi = spidev.SpiDev()
+spi.open(0, 0)                                            # Open SPI bus 0, device 0
+spi.max_speed_hz = 15000000                               # Set speed to 10MHz: 32000000 maximum
+
 start_color_rgb = (164/255, 0, 214/255)
 end_color_rgb = (255/255, 255/255, 0)
 
@@ -37,9 +41,6 @@ for step in range(total_steps):
 
 
 def send_hd108_colors(colors_16bit, global_brightness=15):
-    spi = spidev.SpiDev()
-    spi.open(0, 0)                                            # Open SPI bus 0, device 0
-    spi.max_speed_hz = 2000000                               # Set speed to 10MHz: 32000000 maximum
     
     data = []
     data.extend([0x00] * 8)  # Start frame: HD108 protocol requires 64-bit start frame before LED data
@@ -63,7 +64,6 @@ def send_hd108_colors(colors_16bit, global_brightness=15):
     num_end = 2 * (len(colors_16bit) + 1) 
     data.extend([0xFF] * num_end)  # End frame
     spi.writebytes(data)
-    spi.close()
 
 total_time = 3 #seconds
 time_sleep = total_time/total_steps
@@ -85,3 +85,5 @@ for frame in frames:
     send_hd108_colors(frame, global_brightness = 5)
     #exit()
     time.sleep(time_sleep)
+
+spi.close()
