@@ -41,6 +41,7 @@ test_colors = [
 # send_hd108_colors(test_colors, global_brightness=31)
 # time.sleep(2)
 
-off_colors = [(2**16-1, 2**16-1, 2**16-1) for _ in range(len(test_colors))]
+off_colors = [(100, 100, 100) for _ in range(len(test_colors))]
+send_hd108_colors(off_colors, global_brightness=1)
 send_hd108_colors(off_colors, global_brightness=1)
 time.sleep(2)

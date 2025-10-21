@@ -7,8 +7,8 @@ spi = spidev.SpiDev()
 spi.open(0, 0)                                            # Open SPI bus 0, device 0
 spi.max_speed_hz = 15000000                               # Set speed to 10MHz: 32000000 maximum
 
-start_color_rgb = (164/255, 0, 214/255)
-end_color_rgb = (255/255, 255/255, 0)
+start_color_rgb = (164/255/4, 0, 214/255/4)
+end_color_rgb = (255/255/4, 255/255/4, 0)
 
 frames = []
 total_steps = 255

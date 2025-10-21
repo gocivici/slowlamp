@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 
-data = np.load("pairings-32-tr4w2.npz")
+data = np.load("pairings-32-black_HD108_2-6-test.npz")
 input_rgbs = data["pixel_colors"].astype(np.int32)
 observed_rgbs = data["result_colors"]
 
