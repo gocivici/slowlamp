@@ -4,3 +4,5 @@ __pycache__/
 storage.txt
 *_storage.txt
 composition_*
+*.txt
+*.png
