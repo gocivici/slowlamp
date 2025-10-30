@@ -22,7 +22,7 @@ if using_pi:
 
     picam2.set_controls({'AwbEnable': False})
     picam2.set_controls({'AeEnable': False})
-    picam2.set_controls({'AnalogueGain': 5.0, 'ExposureTime': 10000})
+    picam2.set_controls({'AnalogueGain': 7.5, 'ExposureTime': 15000})
 
     picam2.start()
 
@@ -76,6 +76,9 @@ def extract_center_color(frame):
     crop = frame[cy-15:cy+15, cx-15:cx+15]
     avg_color = crop.mean(axis=(0, 1))  # BGR
     return avg_color[::-1]  # Return as RGB
+    
+def gamma_correct(x, gamma=2.4):
+    return int((2**16-1)*(x/(2**16-1))**gamma)
 
 cap = None
 if not using_pi:
@@ -121,7 +124,8 @@ def send_hd108_colors(colors_16bit, global_brightness=4):
 # Display the camera feed
 while test_index < len(pixel_colors):
     test_color = pixel_colors[test_index]
-    upscaled = (test_color[0]*2**8, test_color[1]*2**7, test_color[2]*2**5)
+    upscaled = (test_color[0]*2**8, test_color[1]*2**7, test_color[2]*2**7) #875 for uncorrected
+    # upscaled = (gamma_correct(upscaled[0]), gamma_correct(upscaled[1]), gamma_correct(upscaled[2]))
     if using_pi:
         send_hd108_colors([upscaled]*11)
         send_hd108_colors([upscaled]*11)
@@ -161,9 +165,9 @@ if not using_pi:
     cv2.destroyAllWindows()
 else:
     colors_16bit = [(0, 0, 0)]*11
-    send_hd108_colors(colors_16bit, global_brightness = 0)
-    send_hd108_colors(colors_16bit, global_brightness = 0)
+    send_hd108_colors(colors_16bit, global_brightness = 1)
+    send_hd108_colors(colors_16bit, global_brightness = 1)
     time.sleep(1)
     spi.close()
 
-np.savez("pairings-32-black_HD108_2-6-test.npz", pixel_colors = pixel_colors, result_colors = result_colors)
+np.savez("pairings-32-white_HD108_877_with_light.npz", pixel_colors = pixel_colors, result_colors = result_colors)

@@ -7,6 +7,7 @@ import os
 
 from colormath.color_objects import LabColor, sRGBColor, LCHabColor
 from colormath.color_conversions import convert_color
+from correct_color_HD108 import correct_color
 
 import spidev
 
@@ -61,7 +62,7 @@ for r in list(range(0, 255, 64))+[255]:
 
 			# time.sleep(1)
 			neo_color = (r, g, b, 0)
-			pixels.fill(neo_color)
+			# pixels.fill(neo_color)
              
 			canvas = np.ones((500, 500, 3)).astype(np.uint8)
 			canvas[:, :, 0] = target_rgb[2]
@@ -71,10 +72,13 @@ for r in list(range(0, 255, 64))+[255]:
 			cv2.imshow('frame', canvas)
 
 			res = cv2.waitKey(0)
+            
+			print("corrected_color", correct_color((r, g, b, 255)))
+			corrected_colors_16bit = [correct_color((r, g, b, 255))]*num_leds
+			send_hd108_colors(corrected_colors_16bit)
+			send_hd108_colors(corrected_colors_16bit)
 
-			# neopixels.fill(target_rgb)
-
-			# res = cv2.waitKey(0)
+			res = cv2.waitKey(0)
 			
 			if res == ord('q'):
 				break
@@ -86,7 +90,7 @@ for r in list(range(0, 255, 64))+[255]:
 		break
 				
 colors_16bit = [(0, 0, 0)]*num_leds
-send_hd108_colors(colors_16bit, global_brightness = 0)
-send_hd108_colors(colors_16bit, global_brightness = 0)
+send_hd108_colors(colors_16bit, global_brightness = 1)
+send_hd108_colors(colors_16bit, global_brightness = 1)
 pixels.fill((0,0,0,0))
 spi.close()
