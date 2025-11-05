@@ -2,7 +2,12 @@
 
 // Clock and data pins are whatever are SPI defaults for your board (SCK, MOSI)
 // Arduino Mega 2560, Clock 52, Data 51
+// Nano: 
+// SCK: D13: clock
+// MOSI: D11: data
+//common ground  
 
+uint16_t num_leds = 55;
 
 uint16_t getBrightness(uint8_t rb, uint8_t gb, uint8_t bb) {
   uint8_t r5 = rb >> 3;
@@ -25,12 +30,12 @@ void setup() {
   SPI.begin();
 }
 void loop() {
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
+  SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE3));
   // Start frame
-  for (int i = 0; i <= 4; i++) {SPI.transfer16(0);}
+  for (int i = 0; i <=  8; i++) {SPI.transfer16(0);} //4
   // LEDs
   // for (int i = 0; i <= 72 * 5; i++) {
-  for (int i = 0; i < 11; i++){
+  for (int i = 0; i < num_leds; i++){
     // LED frame
     // SPI.transfer(0xFF);  // Start of LED Frame & Brightness
     // SPI.transfer(0xFF);  // as (1)(5bit)(5bit)(5bit) brightnesses
@@ -58,7 +63,7 @@ void loop() {
     } 
   }
   // End Frame
-  for (int i = 0; i <= 10; i++) {SPI.transfer16(0xFFFF);} //? 
+  for (int i = 0; i <= num_leds*2; i++) {SPI.transfer16(0xFFFF);} //? 
   SPI.endTransaction();
 
   delay(1000);
