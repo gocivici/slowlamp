@@ -18,16 +18,16 @@ import queue
 import random
 import colour
 
-using_pi = False
-day_length = 0.2 # minutes
-animation_fps = 4 #inverse seconds
+using_pi = True
+day_length = 60 # minutes
+animation_fps = 0.25 #inverse seconds
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
 
 stored_traces = []
 trace_queue = queue.Queue()
 
-using_HD108 = False
+using_HD108 = True
 
 display_cv2_window = True
 
@@ -619,8 +619,7 @@ def animation_thread_target():
                         frame = f[1:].reshape(-1, 4)/3
                         if using_HD108:
                             send_hd108_colors_with_brightness(frame)
-                        else:
-                            print("----------", progress)
+                        print("----------", progress)
                         progress += 1
                     time.sleep(1/animation_fps)
             else: # has new capture
@@ -631,8 +630,8 @@ def animation_thread_target():
                         frame = f[1:].reshape(-1, 4)/3
                         if using_HD108:
                             send_hd108_colors_with_brightness(frame)
-                        else:
-                            print("---------- rushing")
+                        
+                        print("---------- rushing")
                         time.sleep(1/15) #let's speed up a bit... 
                 
                     start_keyframe = target_keyframe
@@ -643,18 +642,19 @@ def animation_thread_target():
                 print("animation length", animation_length)
                 progress = 0
                 animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)        
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            return
         
-capture_thread = threading.Thread(target=capture_thread_target)
-animation_thread = threading.Thread(target=animation_thread_target)
+# capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
+animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
 
-capture_thread.start()
+# capture_thread.start()
 animation_thread.start()
 
-capture_thread.join()
-animation_thread.join()
+# capture_thread.join()
+# animation_thread.join()
+
+capture_thread_target()
+
+# animation_thread.join()
 
 print("Main: All threads finished.")
 
