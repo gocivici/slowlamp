@@ -13,7 +13,7 @@ import colour
 import correct_color_HD108
 
 
-record = "C:/work/slow_lamp/light_simulation/20250723_two_days.txt"
+record = "/home/slowlamp2/Documents/slowlamp/HD108/20250723_two_days.txt"
 # csv_file = open("C:/work/slow_lamp/light_simulation/animation_HD108_freeform.csv", "w", newline='') 
 # csv_coordinates = open("C:/work/slow_lamp/light_simulation/coordinates_HD108_freeform.csv", "w", newline='') 
 # writer = csv.writer(csv_file)
@@ -507,9 +507,12 @@ for i in range(1, len(header), 4):
         lab_full.append(color_lab)
 
     lab_full = np.array(lab_full)
+    print(lab_full[0])
+    
     input_pixels = correct_color_HD108.correct_color_from_lab(lab_full)
+    print(input_pixels[0])
 
-    input_brightness = np.clip((watt/base_watt)*20, 1, 20)
+    input_brightness = np.clip((watt/base_watt)*10, 1, 10)
     animation_brightness = interpolate_non_zeros_stretched(frame_indices, input_brightness, time_arr)
 
     animation_plan[:, i] = animation_brightness
@@ -536,7 +539,7 @@ def send_hd108_colors_with_brightness(colors_16bit):
         
         # print(int(r16/255), int(g16/255), int(b16/255))
         if brightness <= 0:
-            brightness = 1
+            brightness_frame = (1 << 15) | (1 << 10) | (1 << 5) | 1
         else:
             brightness_frame = (1 << 15) | (brightness << 10) | (brightness << 5) | brightness
         
@@ -551,8 +554,11 @@ def send_hd108_colors_with_brightness(colors_16bit):
     data.extend([0xFF] * num_end)  # End frame
     spi.writebytes(data)
 
+print(animation_plan[0])
+print(animation_plan[-10])
+
 for f in animation_plan:
-    frame = f.reshape(-1, 4)
+    frame = f[1:].reshape(-1, 4)/3
     send_hd108_colors_with_brightness(frame)
     time.sleep(1/fps)
 

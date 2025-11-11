@@ -11,7 +11,7 @@ from correct_color_HD108 import correct_color
 
 import spidev
 
-num_leds = 11
+num_leds = 55
 
 import board
 import neopixel

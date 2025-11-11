@@ -5,14 +5,14 @@ import time
 
 spi = spidev.SpiDev()
 spi.open(0, 0)                                            # Open SPI bus 0, device 0
-spi.max_speed_hz = 15000000                               # Set speed to 10MHz: 32000000 maximum
+spi.max_speed_hz = 1000000                               # Set speed to 10MHz: 32000000 maximum
 
 start_color_rgb = (164/255/4, 0, 214/255/4)
 end_color_rgb = (255/255/4, 255/255/4, 0)
 
 frames = []
-total_steps = 255
-num_pixels = 11
+total_steps = 128
+num_pixels = 55
 
 start_color_oklab = colour.convert(start_color_rgb, "sRGB", "Oklab")
 end_color_oklab = colour.convert(end_color_rgb, "sRGB", "Oklab")
@@ -40,7 +40,7 @@ for step in range(total_steps):
     frames.append(frame)
 
 
-def send_hd108_colors(colors_16bit, global_brightness=15):
+def send_hd108_colors(colors_16bit, global_brightness=5):
     
     data = []
     data.extend([0x00] * 8)  # Start frame: HD108 protocol requires 64-bit start frame before LED data
@@ -50,7 +50,7 @@ def send_hd108_colors(colors_16bit, global_brightness=15):
         
         # print(int(r16/255), int(g16/255), int(b16/255))
         if global_brightness <= 0:
-            brightness = 0 #gives werid colors
+            brightness = 1 # 0 gives werid colors
         else:
             brightness = (1 << 15) | (global_brightness << 10) | (global_brightness << 5) | global_brightness
         
@@ -70,19 +70,19 @@ time_sleep = total_time/total_steps
 
 for frame in frames:
     # print(frame)
-    send_hd108_colors(frame, global_brightness = 5)
+    send_hd108_colors(frame, global_brightness = 15)
     #exit()
     time.sleep(time_sleep)
 
 for frame in frames:
     # print(frame)
-    send_hd108_colors(frame, global_brightness = 5)
+    send_hd108_colors(frame, global_brightness = 15)
     #exit()
     time.sleep(time_sleep)
     
 for frame in frames:
     # print(frame)
-    send_hd108_colors(frame, global_brightness = 5)
+    send_hd108_colors(frame, global_brightness = 15)
     #exit()
     time.sleep(time_sleep)
 

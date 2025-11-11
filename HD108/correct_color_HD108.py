@@ -164,9 +164,9 @@ def correct_color(target_rgba):
 def correct_color_from_lab(lab_array):
     global inverse_model
     inverse_model.out_activation_ = "relu"
-    lab_array[:, 0] /= 100 # (l/100, (a+128)/255, (b+128)/255)
-    lab_array[:, 1] = (lab_array[:, 1]+128)/255 # (l/100, (a+128)/255, (b+128)/255)
-    lab_array[:, 2] = (lab_array[:, 2]+128)/255  # (l/100, (a+128)/255, (b+128)/255)
+    # lab_array[:, 0] /= 100 # (l/100, (a+128)/255, (b+128)/255)
+    lab_array[:, 1] = lab_array[:, 1] + 0.5 # (lab_array[:, 1]+128)/255 # (l/100, (a+128)/255, (b+128)/255)
+    lab_array[:, 2] = lab_array[:, 2] + 0.5 # (lab_array[:, 2]+128)/255  # (l/100, (a+128)/255, (b+128)/255)
     pixel_input = inverse_model.predict(lab_array)
     pixel_input = (np.clip(pixel_input, 0, 1)*(2**16-1)).round()
     return pixel_input
