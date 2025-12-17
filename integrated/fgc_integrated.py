@@ -288,6 +288,7 @@ def dominantColor(waitTime):
             vr_count = count
 
     vibrant_color = DominantColors[vr_chosen_id]
+    largest_color = DominantColors[0]
     lg_count = label_counts_sorted[0]
     # print("selected vibrant color", vibrant_color, "with", vr_count)
 
