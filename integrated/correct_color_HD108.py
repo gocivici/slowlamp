@@ -35,7 +35,7 @@ def gamma_correct(i, gamma=2.4):
 
 inverse_model = None
 model_name = 'hd108_joint_model_relu.pkl'
-data_folder = './HD108/'
+data_folder = '/home/slowlamp3/Documents/slowlamp/HD108/'
 if not os.path.exists(model_name):
     data = np.load(data_folder+"pairings-32-black_HD108_777.npz")
     linear7_input_rgbs = data["pixel_colors"].astype(np.int32)*2**7

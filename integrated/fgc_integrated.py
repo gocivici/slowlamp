@@ -24,7 +24,7 @@ using_pi = True
 day_length = 60 # minutes
 animation_fps = 0.25 #inverse seconds
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-storage_file = open(f"{filename_time}_fgc_yumeng.txt", "w")
+storage_file = open(f"{filename_time}_fgc_integrated.txt", "w")
 
 stored_traces = []
 trace_queue = queue.Queue()
@@ -42,7 +42,7 @@ if using_pi:
 
     #------------------------Camera Setup---------------------------------------
     from picamera2 import Picamera2
-    tuning = Picamera2.load_tuning_file("/home/slowlamp2/Documents/slowlamp/image_proc/test.json") #imx477
+    tuning = Picamera2.load_tuning_file("/home/slowlamp3/Documents/slowlamp/image_proc/test.json") #imx477
     camera = Picamera2(tuning=tuning)
     # camera.resolution= (2028,1520)
     # camera.preview_configuration.main.format = "RGB888"
@@ -178,10 +178,10 @@ def dominantColor(waitTime):
     
         
     current_img_bgr = cv2.cvtColor(current_img, cv2.COLOR_RGB2BGR )
-    cv2.imwrite('curim.png', current_img_bgr)
+    # cv2.imwrite('curim.png', current_img_bgr)
     # filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     # cv2.imwrite(f'curim_{filename_time}.png', current_img_bgr)
-    cv2.imwrite('previm.png', previous_img)
+    # cv2.imwrite('previm.png', previous_img)
 
 #-------------------------Backgorund Substraction-----------------------------------
     # Compare with the previous image
@@ -207,7 +207,7 @@ def dominantColor(waitTime):
     fgimg = cv2.bitwise_and(current_img,current_img,mask = morph)
     diff_preview = resize_to_max(fgimg, feed_preview_size)
 
-    cv2.imwrite('substract.png', fgimg)
+    # cv2.imwrite('substract.png', fgimg)
     #-------------------------Color Detection-----------------------------------
     largest_color = np.array([255, 255, 255, 0])
     vibrant_color = np.array([255, 255, 255, 0])

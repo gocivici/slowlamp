@@ -1,0 +1,16 @@
+[Unit]
+Description=Slow Lamp Bespoke Version
+After=graphical.target
+
+[Service]
+Type=simple
+User=slowlamp3
+WorkingDirectory=/home/slowlamp3/Documents
+ExecStart=/home/slowlamp3/bin/python3 /home/slowlamp3/Documents/slowlamp/integrated/fgc_integrated.py
+StandardOutput=append:/home/slowlamp3/Documents/my.log
+StandardError=append:/home/slowlamp3/Documents/my.log
+Restart=always
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=graphical.target
