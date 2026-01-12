@@ -18,6 +18,8 @@ import queue
 import random
 import colour
 
+import cover
+
 using_pi = True
 day_length = 60 # minutes
 animation_fps = 0.25 #inverse seconds
@@ -133,10 +135,10 @@ def capture_image():
         for exp in exposure_time: 
             camera.set_controls({"ExposureTime": exp, "AnalogueGain": 1.0}) 
             camera.start()
-            file_name = f"frame_{exp}.jpg"
+            # file_name = f"frame_{exp}.jpg"
             frame_plain = camera.capture_array()
             frames.append(frame_plain)
-            cv2.imwrite(file_name, frame_plain)
+            # cv2.imwrite(file_name, frame_plain)# no saving to memory 
             camera.stop()
 
         mergeMertens = cv2.createMergeMertens()
@@ -331,17 +333,25 @@ def dominantColor(waitTime):
             canvas = cv2.putText(canvas, f'count {count}', (feed_preview_x+color_swatch_size, y_min+10), font, font_scale, text_color, thickness)
         
         circle_center = (190 + (800-feed_preview_size*2)//2, 250)
-        vibrant_radius = 150
+        vibrant_radius = 100
         ambient_radius = 190
         angle_per_swatch = 360/24
         for i, trace in enumerate(stored_traces):
             # swatch = trace.paint_trace()
-            trace_vibrant_color = to_cv2_color(trace.main_color)
-            trace_ambient_color = to_cv2_color(trace.supplemental_colors[0])
-            canvas = cv2.ellipse(canvas,circle_center,(ambient_radius, ambient_radius), angle_per_swatch, i*angle_per_swatch, (i+1)*angle_per_swatch,
+            
+            
+            supp_colors = trace.supplemental_colors
+            for j in range(len(supp_colors)):
+                r = (ambient_radius-vibrant_radius)//len(supp_colors)*(len(supp_colors)-j) + vibrant_radius
+                trace_ambient_color = to_cv2_color(supp_colors[j])
+                canvas = cv2.ellipse(canvas,circle_center,(r, r), angle_per_swatch, i*angle_per_swatch, (i+1)*angle_per_swatch,
                                 trace_ambient_color, -1)
+            
+
+            trace_vibrant_color = to_cv2_color(trace.main_color)
             canvas = cv2.ellipse(canvas,circle_center,(vibrant_radius, vibrant_radius), angle_per_swatch, i*angle_per_swatch, (i+1)*angle_per_swatch,
                                 trace_vibrant_color, -1)
+            
             if i >= 23:
                 # clear "stored" traces used in diagonstic visualization
                 stored_traces = []
@@ -358,6 +368,12 @@ def dominantColor(waitTime):
         canvas = cv2.circle(canvas, circle_center, int((vibrant_radius-40)*vr_percent**(0.5)), current_vibrant_color, -1)
         
         cv2.imshow('frame', canvas)
+
+    record = [tuple(vibrant_color[:-1]), vr_count,
+            tuple(other_colors[0][:-1]), other_counts[0], tuple(other_colors[1][:-1]), other_counts[1],
+            tuple(other_colors[2][:-1]), other_counts[2], tuple(other_colors[3][:-1]), other_counts[3], int(time.time()//3600)]
+    print(record)
+    cover.save(*record)
 
     time_elapsed = time.time() - start_time_seconds  
     return (largest_color, lg_count), (vibrant_color, vr_count), time_elapsed
@@ -433,9 +449,9 @@ def capture_thread_target():
         largest_color, vibrant_color, time_elapsed = dominantColor(day_length*60-time_elapsed) #time in seconds
         print("color profile: largest_color, vibrant_color")
         print(largest_color, vibrant_color)
-        saveColor(largest_color[0], filename = "archive_largest.png")
+        # saveColor(largest_color[0], filename = "archive_largest.png")
         # saveColor(expressible_color, filename = "archive_expressible.png")
-        saveColor(vibrant_color[0], filename = "archive_vibrant.png")
+        # saveColor(vibrant_color[0], filename = "archive_vibrant.png")
         # saveColor(cluster_color, filename = "archive_cluster.png")
         # saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
 
