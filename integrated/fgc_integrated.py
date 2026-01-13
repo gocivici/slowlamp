@@ -19,19 +19,32 @@ import random
 import colour
 
 import cover
+import json
 
-using_pi = True
-day_length = 60 # minutes
-animation_fps = 0.25 #inverse seconds
+
+def loadConfig(pathtofile):
+    with open(pathtofile, 'r') as file:
+            config = json.load(file)
+            return config
+            
+#load config data json format
+configData = loadConfig('config.json')
+
+
+using_pi = configData.get("using_pi")
+day_length = configData.get("day_length") # minutes
+animation_fps = configData.get("animation_fps") #inverse seconds
+using_HD108 = configData.get("using_HD108")
+diyVersion = configData.get("diyVersion")
+display_cv2_window = configData.get("display_cv2_window ")
+
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_integrated.txt", "w")
 
 stored_traces = []
 trace_queue = queue.Queue()
 
-using_HD108 = True
-diyVersion = False
-display_cv2_window = True
+
 
 if using_pi:
     # import board
