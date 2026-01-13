@@ -8,7 +8,7 @@ from PIL import Image
 from datetime import datetime
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
-import correct_color_HD108
+#import correct_color_HD108
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 
@@ -27,9 +27,12 @@ filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_integrated.txt", "w")
 
 stored_traces = []
-trace_queue = queue.Queue()
+if not diyVersion:
+    trace_queue = queue.Queue()
 
-using_HD108 = True
+using_HD108 = False
+
+diyVersion = True
 
 display_cv2_window = True
 
@@ -232,7 +235,8 @@ def dominantColor(waitTime):
         trace = helper_classes.Trace(vibrant_color, 0, traces_storing_mode="vaooo", supplemental_colors=[largest_color]*4, supplemental_counts = [0]*4)
         stored_traces.append(trace)
         storage_file.writelines([trace.print_trace()])
-        trace_queue.put(trace)
+        if not diyVersion:
+            trace_queue.put(trace)
         time_elapsed = time.time() - start_time_seconds  
         return (largest_color, 0), (vibrant_color, 0),  time_elapsed
     
@@ -309,7 +313,8 @@ def dominantColor(waitTime):
     stored_traces.append(trace)
     storage_file.writelines([trace.print_trace()])
     storage_file.flush()
-    trace_queue.put(trace)
+    if not diyVersion:
+        trace_queue.put(trace)
 
     if display_cv2_window:
         # display some stuff
@@ -600,7 +605,8 @@ def animation_thread_target():
 
     while True:
         if len(tracks) == 0 and not trace_queue.empty():
-            trace = trace_queue.get()
+            if not diyVersion:
+                trace = trace_queue.get()
             # Calculate center of all LEDs for vibrant cluster
             center_x = np.mean(led_points[:, 0])
             center_y = np.mean(led_points[:, 1])
@@ -652,8 +658,8 @@ def animation_thread_target():
                         time.sleep(1/15) #let's speed up a bit... 
                 
                     start_keyframe = target_keyframe
-
-                trace = trace_queue.get()
+                if not diyVersion:
+                    trace = trace_queue.get()
                 target_keyframe = generate_frame_from_trace_tracks(trace, tracks)
                 animation_length = int((target_keyframe[0] - start_keyframe[0])*animation_fps*0.8) # 0.8 = a pause for computation time
                 print("animation length", animation_length)
@@ -661,19 +667,23 @@ def animation_thread_target():
                 animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)        
         
 # capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
-animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
+if not diyVersion:
+    animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
 
 # capture_thread.start()
-animation_thread.start()
+if not diyVersion:
+    animation_thread.start()
 
 # capture_thread.join()
 # animation_thread.join()
 
-capture_thread_target()
+if not diyVersion:
+    capture_thread_target()
 
 # animation_thread.join()
 
-print("Main: All threads finished.")
+if not diyVersion:
+    print("Main: All threads finished.")
 
 if not using_pi:
     # Release the camera resources
