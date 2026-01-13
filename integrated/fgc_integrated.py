@@ -27,12 +27,15 @@ filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_integrated.txt", "w")
 
 stored_traces = []
+
+diyVersion = True
+
 if not diyVersion:
     trace_queue = queue.Queue()
 
 using_HD108 = False
 
-diyVersion = True
+
 
 display_cv2_window = True
 
