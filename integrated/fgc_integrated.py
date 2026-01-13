@@ -48,8 +48,12 @@ if using_pi:
 
     #------------------------Camera Setup---------------------------------------
     from picamera2 import Picamera2
-    tuning = Picamera2.load_tuning_file("/home/slowlamp3/Documents/slowlamp/image_proc/test.json") #imx477
-    camera = Picamera2(tuning=tuning)
+
+    if not diyVersion:
+        tuning = Picamera2.load_tuning_file("/home/slowlamp3/Documents/slowlamp/image_proc/test.json") #imx477
+        camera = Picamera2(tuning=tuning)
+    else:
+        camera = Picamera2()
     # camera.resolution= (2028,1520)
     # camera.preview_configuration.main.format = "RGB888"
     # camera.set_controls({'AnalogueGain': 25.0, 'ExposureTime': 22000})
