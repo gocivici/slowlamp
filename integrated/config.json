@@ -4,5 +4,5 @@
     "animation_fps" : 0.25,
     "using_HD108" : false,
     "diyVersion" : true,
-    "display_cv2_window" : true
+    "display_cv2_window" : false
 }
