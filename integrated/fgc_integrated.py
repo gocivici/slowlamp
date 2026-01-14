@@ -8,7 +8,6 @@ from PIL import Image
 from datetime import datetime
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
-import correct_color_HD108
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 
@@ -26,7 +25,7 @@ def loadConfig(pathtofile):
     with open(pathtofile, 'r') as file:
             config = json.load(file)
             return config
-            
+
 #load config data json format
 configData = loadConfig('config.json')
 
@@ -37,6 +36,9 @@ animation_fps = configData.get("animation_fps") #inverse seconds
 using_HD108 = configData.get("using_HD108")
 diyVersion = configData.get("diyVersion")
 display_cv2_window = configData.get("display_cv2_window")
+
+if not diyVersion:
+    import correct_color_HD108
 
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_integrated.txt", "w")
@@ -55,17 +57,21 @@ if using_pi:
 
     #------------------------Camera Setup---------------------------------------
     from picamera2 import Picamera2
-    tuning = Picamera2.load_tuning_file("/home/slowlamp3/Documents/slowlamp/image_proc/test.json") #imx477
-    camera = Picamera2(tuning=tuning)
+    if not diyVersion:
+        tuning = Picamera2.load_tuning_file("/home/slowlamp3/Documents/slowlamp/image_proc/test.json") #imx477
+        camera = Picamera2(tuning=tuning)
+    camera = Picamera2()
+    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 3}) #DaylightMode=4, indoor=3
+    camera.configure(config) 
+    exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
+    
     # camera.resolution= (2028,1520)
     # camera.preview_configuration.main.format = "RGB888"
     # camera.set_controls({'AnalogueGain': 25.0, 'ExposureTime': 22000})
     # camera.start()
 
     # camera.start(show_preview=False)
-    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 3}) #DaylightMode=4, indoor=3
-    camera.configure(config) 
-    exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
+
 
 if using_HD108:
     import spidev
@@ -147,7 +153,7 @@ def capture_image():
         frames = []
         for exp in exposure_time: 
             camera.set_controls({"ExposureTime": exp, "AnalogueGain": 1.0}) 
-            camera.start()
+            camera.start(show_preview=False)
             # file_name = f"frame_{exp}.jpg"
             frame_plain = camera.capture_array()
             frames.append(frame_plain)
