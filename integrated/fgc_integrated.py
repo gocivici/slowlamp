@@ -36,7 +36,7 @@ day_length = configData.get("day_length") # minutes
 animation_fps = configData.get("animation_fps") #inverse seconds
 using_HD108 = configData.get("using_HD108")
 diyVersion = configData.get("diyVersion")
-display_cv2_window = configData.get("display_cv2_window ")
+display_cv2_window = configData.get("display_cv2_window")
 
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_integrated.txt", "w")
@@ -245,7 +245,8 @@ def dominantColor(waitTime):
         trace = helper_classes.Trace(vibrant_color, 0, traces_storing_mode="vaooo", supplemental_colors=[largest_color]*4, supplemental_counts = [0]*4)
         stored_traces.append(trace)
         storage_file.writelines([trace.print_trace()])
-        trace_queue.put(trace)
+        if not diyVersion:
+            trace_queue.put(trace)
         time_elapsed = time.time() - start_time_seconds  
         return (largest_color, 0), (vibrant_color, 0),  time_elapsed
     
@@ -322,7 +323,8 @@ def dominantColor(waitTime):
     stored_traces.append(trace)
     storage_file.writelines([trace.print_trace()])
     storage_file.flush()
-    trace_queue.put(trace)
+    if not diyVersion:
+        trace_queue.put(trace)
 
     if display_cv2_window:
         # display some stuff
@@ -672,12 +674,13 @@ def animation_thread_target():
                 print("animation length", animation_length)
                 progress = 0
                 animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)        
-        
-# capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
-animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
 
-# capture_thread.start()
-animation_thread.start()
+if not diyVersion:        
+    # capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
+    animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
+
+    # capture_thread.start()
+    animation_thread.start()
 
 # capture_thread.join()
 # animation_thread.join()

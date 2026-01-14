@@ -1,7 +1,8 @@
 {
+    "using_pi": true,
     "day_length" : 60,
     "animation_fps" : 0.25,
-    "using_HD108" : true,
-    "diyVersion" : false,
+    "using_HD108" : false,
+    "diyVersion" : true,
     "display_cv2_window" : true
 }
