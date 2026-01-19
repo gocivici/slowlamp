@@ -335,7 +335,8 @@ def dominantColor(waitTime):
     storage_file.flush()
     if not diyVersion:
         trace_queue.put(trace)
-
+    if len(stored_traces) > 23:
+        stored_traces = stored_traces[-23:]
     if display_cv2_window:
         # display some stuff
         canvas = np.ones((500, 800, 3)).astype(np.uint8)
