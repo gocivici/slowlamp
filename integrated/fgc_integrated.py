@@ -480,6 +480,12 @@ def capture_thread_target():
         # saveColor(vibrant_color[0], filename = "archive_vibrant.png")
         # saveColor(cluster_color, filename = "archive_cluster.png")
         # saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
+        if diyVersion:    
+            currentData = cover.retrieve()
+            spiralImage = draw_spiral(currentData)
+            cv2.imwrite("spiral.png", spiralImage)
+            cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", "spiral.png"]
+            subprocess.run(cmd, check=True)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return
@@ -698,12 +704,7 @@ if not diyVersion:
 
 capture_thread_target()
 
-if diyVersion:    
-    currentData = cover.retrieve()
-    spiralImage = draw_spiral(currentData)
-    cv2.imwrite("spiral.png", spiralImage)
-    cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", "spiral.png"]
-    subprocess.run(cmd, check=True)
+
 
 # animation_thread.join()
 
