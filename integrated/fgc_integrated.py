@@ -698,12 +698,11 @@ if not diyVersion:
 
 capture_thread_target()
 
-if diyVersion:
-
+if diyVersion:    
     currentData = cover.retrieve()
     spiralImage = draw_spiral(currentData)
     cv2.imwrite("spiral.png", spiralImage)
-    cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", filepath]
+    cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", "spiral.png"]
     subprocess.run(cmd, check=True)
 
 # animation_thread.join()
