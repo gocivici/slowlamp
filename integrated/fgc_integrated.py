@@ -4,12 +4,15 @@ import cv2 #pip install opencv-python ||| pip3 install opencv-contrib-python==4.
 import time
 import math
 import os
+import subprocess
 from PIL import Image
 from datetime import datetime
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
+
+from spiral import drawSpiral
 
 import helper_classes
 import threading
@@ -397,6 +400,7 @@ def dominantColor(waitTime):
     print(record)
     cover.save(*record)
 
+
     time_elapsed = time.time() - start_time_seconds  
     return (largest_color, lg_count), (vibrant_color, vr_count), time_elapsed
 
@@ -693,6 +697,14 @@ if not diyVersion:
 # animation_thread.join()
 
 capture_thread_target()
+
+if diyVersion:
+
+    currentData = cover.retrieve()
+    spiralImage = draw_spiral(currentData)
+    cv2.imwrite("spiral.png", spiralImage)
+    cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", filepath]
+    subprocess.run(cmd, check=True)
 
 # animation_thread.join()
 
