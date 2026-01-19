@@ -482,7 +482,7 @@ def capture_thread_target():
         # saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
         if diyVersion:    
             currentData = cover.retrieve()
-            spiralImage = draw_spiral(currentData)
+            spiralImage = drawSpiral(currentData)
             cv2.imwrite("spiral.png", spiralImage)
             cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", "spiral.png"]
             subprocess.run(cmd, check=True)
