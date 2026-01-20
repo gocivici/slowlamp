@@ -18,11 +18,11 @@ def drawSpiral(spiral_data, img_size=240, min_radius=40, max_radius=120):
     
     start_ts = spiral_data[0]['timestamp']
     end_ts = spiral_data[-1]['timestamp']
-    duration_seconds = max(end_ts - start_ts, 1)
+    duration_hours = max(end_ts - start_ts, 1)
 
     # Calculate growth factor 'b'
-    total_hours_duration = duration_seconds / 3600
-    max_cumulative_angle_rad = (total_hours_duration * angle_per_hour) * (np.pi / 180)
+    # total_hours_duration = duration_seconds / 3600
+    max_cumulative_angle_rad = (duration_hours * angle_per_hour) * (np.pi / 180)
     
 
     if max_cumulative_angle_rad < 2 * np.pi:
