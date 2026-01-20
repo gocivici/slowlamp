@@ -41,13 +41,13 @@ def drawSpiral(spiral_data, img_size=240, min_radius=40, max_radius=120):
         
  
         current_ts = entry['timestamp']
-        hours_elapsed = (current_ts - start_ts) / 3600.0
+        hours_elapsed = (current_ts - start_ts)
         cumulative_angle_rad = (hours_elapsed * angle_per_hour) * (np.pi / 180)
         radius = int(min_radius + b * cumulative_angle_rad)
         
 
-        dt_obj = datetime.datetime.fromtimestamp(current_ts)
-        draw_angle_deg = (dt_obj.hour * angle_per_hour) - 90
+        hour_of_day = current_ts % 24
+        draw_angle_deg = (hour_of_day * angle_per_hour) - 90
         
         cv2.ellipse(
             canvas, circle_center, (radius, radius), 
