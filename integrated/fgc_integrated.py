@@ -4,13 +4,15 @@ import cv2 #pip install opencv-python ||| pip3 install opencv-contrib-python==4.
 import time
 import math
 import os
+import subprocess
 from PIL import Image
 from datetime import datetime
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
-import correct_color_HD108
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
+
+from spiral import drawSpiral
 
 import helper_classes
 import threading
@@ -26,7 +28,7 @@ def loadConfig(pathtofile):
     with open(pathtofile, 'r') as file:
             config = json.load(file)
             return config
-            
+
 #load config data json format
 configData = loadConfig('integrated/config.json')
 
@@ -37,6 +39,9 @@ animation_fps = configData.get("animation_fps") #inverse seconds
 using_HD108 = configData.get("using_HD108")
 diyVersion = configData.get("diyVersion")
 display_cv2_window = configData.get("display_cv2_window")
+
+if not diyVersion:
+    import correct_color_HD108
 
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_integrated.txt", "w")
@@ -55,21 +60,28 @@ if using_pi:
 
     #------------------------Camera Setup---------------------------------------
     from picamera2 import Picamera2
-    tuning_file_path = configData.get("camera_tuning_file")
-    if tuning_file_path != "":
-        tuning = Picamera2.load_tuning_file(tuning_file_path) #imx477
-        camera = Picamera2(tuning=tuning)
-    else: 
+    if not diyVersion:
+        tuning_file_path = configData.get("camera_tuning_file")
+        if tuning_file_path != "":
+            tuning = Picamera2.load_tuning_file(tuning_file_path) #imx477
+            camera = Picamera2(tuning=tuning)
+        else: 
+            camera = Picamera2()
+        exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
+    else:
         camera = Picamera2()
+        exposure_time = [62500]
+
+    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 3}) #DaylightMode=4, indoor=3
+    camera.configure(config) 
+
     # camera.resolution= (2028,1520)
     # camera.preview_configuration.main.format = "RGB888"
     # camera.set_controls({'AnalogueGain': 25.0, 'ExposureTime': 22000})
     # camera.start()
 
     # camera.start(show_preview=False)
-    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 3}) #DaylightMode=4, indoor=3
-    camera.configure(config) 
-    exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
+
 
 if using_HD108:
     import spidev
@@ -154,7 +166,7 @@ def capture_image():
         frames = []
         for exp in exposure_time: 
             camera.set_controls({"ExposureTime": exp, "AnalogueGain": 1.0}) 
-            camera.start()
+            camera.start(show_preview=False)
             # file_name = f"frame_{exp}.jpg"
             frame_plain = camera.capture_array()
             frames.append(frame_plain)
@@ -332,7 +344,8 @@ def dominantColor(waitTime):
     storage_file.flush()
     if not diyVersion:
         trace_queue.put(trace)
-
+    if len(stored_traces) > 23:
+        stored_traces = stored_traces[-23:]
     if display_cv2_window:
         # display some stuff
         canvas = np.ones((500, 800, 3)).astype(np.uint8)
@@ -396,6 +409,7 @@ def dominantColor(waitTime):
             tuple(other_colors[2][:-1]), other_counts[2], tuple(other_colors[3][:-1]), other_counts[3], int(time.time()//3600)]
     print(record)
     cover.save(*record)
+
 
     time_elapsed = time.time() - start_time_seconds  
     return (largest_color, lg_count), (vibrant_color, vr_count), time_elapsed
@@ -476,6 +490,12 @@ def capture_thread_target():
         # saveColor(vibrant_color[0], filename = "archive_vibrant.png")
         # saveColor(cluster_color, filename = "archive_cluster.png")
         # saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
+        if diyVersion:    
+            currentData = cover.retrieve()
+            spiralImage = drawSpiral(currentData)
+            cv2.imwrite("spiral.png", spiralImage)
+            cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", "spiral.png"]
+            subprocess.run(cmd, check=True)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return
@@ -697,6 +717,8 @@ if not diyVersion:
 # animation_thread.join()
 
 capture_thread_target()
+
+
 
 # animation_thread.join()
 
