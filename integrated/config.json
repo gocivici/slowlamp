@@ -3,6 +3,8 @@
     "day_length" : 60,
     "animation_fps" : 0.25,
     "using_HD108" : false,
-    "diyVersion" : true,
-    "display_cv2_window" : true
+    "diyVersion" : false,
+    "display_cv2_window" : true,
+    "led_color_data_folder": "/home/slowlamp3/Documents/slowlamp/HD108/",
+    "camera_tuning_file": "/home/slowlamp3/Documents/slowlamp/image_proc/test.json"
 }

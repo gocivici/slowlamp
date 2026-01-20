@@ -1,7 +1,7 @@
 
-Remember to change file paths in `correct_color_HD108.py` (data folder) and the tuning file in `fgc_integrated.py`
+Remember to change file paths in `config.json` data folder and tuning file (= "" if there isn't any tuning file)
 
-Remember to change user in `slowlamp_app.service`
+Remember to change user and paths in `slowlamp_app.service`
 
 ```
 sudo nano /etc/systemd/system/slowlamp_app.service

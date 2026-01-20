@@ -1,6 +1,5 @@
 from colormath.color_objects import sRGBColor, XYZColor, xyYColor, LabColor
 from colormath.color_conversions import convert_color
-import matplotlib.pyplot as plt
 import numpy as np
 # from mpl_toolkits.mplot3d import Axes3D
 # from sklearn.ensemble import RandomForestRegressor
@@ -31,105 +30,113 @@ def gamma_correct(i, gamma=2.4):
     i = np.clip( i, 0, 2**16-1)
     return np.round(((2**16-1)*(i/(2**16-1))**gamma))
 
-
+def lab_to_rgb(lab):
+    lab = LabColor(lab[0], lab[1], lab[2])
+    srgb = convert_color(lab, sRGBColor)
+    return (srgb.r, srgb.g, srgb.b)
 
 inverse_model = None
-model_name = 'hd108_joint_model_relu.pkl'
-data_folder = '/home/slowlamp3/Documents/slowlamp/HD108/'
-if not os.path.exists(model_name):
-    data = np.load(data_folder+"pairings-32-black_HD108_777.npz")
-    linear7_input_rgbs = data["pixel_colors"].astype(np.int32)*2**7
-    linear7_observed_rgbs = data["result_colors"]
+Y_lab = None
+X_rgbw = None
 
-    data = np.load(data_folder+"pairings-32-black_HD108_875.npz")
-    linear875_input_rgbs = data["pixel_colors"].astype(np.int32)
-    linear875_input_rgbs[:, 0] = linear875_input_rgbs[:, 0]*2**8
-    linear875_input_rgbs[:, 1] = linear875_input_rgbs[:, 1]*2**7
-    linear875_input_rgbs[:, 2] = linear875_input_rgbs[:, 2]*2**5
-    linear875_observed_rgbs = data["result_colors"]
+def init(data_folder): 
+    global inverse_model   
+    model_name = 'hd108_joint_model_relu.pkl'
+    if not os.path.exists(model_name):
+        data = np.load(data_folder+"pairings-32-black_HD108_777.npz")
+        linear7_input_rgbs = data["pixel_colors"].astype(np.int32)*2**7
+        linear7_observed_rgbs = data["result_colors"]
+
+        data = np.load(data_folder+"pairings-32-black_HD108_875.npz")
+        linear875_input_rgbs = data["pixel_colors"].astype(np.int32)
+        linear875_input_rgbs[:, 0] = linear875_input_rgbs[:, 0]*2**8
+        linear875_input_rgbs[:, 1] = linear875_input_rgbs[:, 1]*2**7
+        linear875_input_rgbs[:, 2] = linear875_input_rgbs[:, 2]*2**5
+        linear875_observed_rgbs = data["result_colors"]
 
 
-    data = np.load(data_folder+"pairings-32-black_HD108_877-2.4.npz")
-    gamma_input_rgbs = data["pixel_colors"].astype(np.int32)
-    gamma_input_rgbs[:, 0] = gamma_input_rgbs[:, 0]*2**8
-    gamma_input_rgbs[:, 1] = gamma_input_rgbs[:, 1]*2**7
-    gamma_input_rgbs[:, 2] = gamma_input_rgbs[:, 2]*2**7
-    gamma_input_rgbs = gamma_correct(gamma_input_rgbs)
+        data = np.load(data_folder+"pairings-32-black_HD108_877-2.4.npz")
+        gamma_input_rgbs = data["pixel_colors"].astype(np.int32)
+        gamma_input_rgbs[:, 0] = gamma_input_rgbs[:, 0]*2**8
+        gamma_input_rgbs[:, 1] = gamma_input_rgbs[:, 1]*2**7
+        gamma_input_rgbs[:, 2] = gamma_input_rgbs[:, 2]*2**7
+        gamma_input_rgbs = gamma_correct(gamma_input_rgbs)
 
-    gamma_observed_rgbs = data["result_colors"]
+        gamma_observed_rgbs = data["result_colors"]
 
-    input_rgbs = np.concatenate([linear7_input_rgbs, linear875_input_rgbs, gamma_input_rgbs])
-    observed_rgbs = np.concatenate([linear7_observed_rgbs, linear875_observed_rgbs, gamma_observed_rgbs])
+        input_rgbs = np.concatenate([linear7_input_rgbs, linear875_input_rgbs, gamma_input_rgbs])
+        observed_rgbs = np.concatenate([linear7_observed_rgbs, linear875_observed_rgbs, gamma_observed_rgbs])
 
-    print("input_rgbs[11]", input_rgbs[11])
-    input_rgbs_list = input_rgbs.tolist()
-    observed_rgbs_list = observed_rgbs.tolist()
+        print("input_rgbs[11]", input_rgbs[11])
+        input_rgbs_list = input_rgbs.tolist()
+        observed_rgbs_list = observed_rgbs.tolist()
 
-    X_rgbw = input_rgbs/2**16
-    # Your NeoPixel RGB samples → xy coords
-    Y_lab = [rgb_to_lab_normalized(rgb) for rgb in observed_rgbs_list]
+        X_rgbw = input_rgbs/2**16
+        # Your NeoPixel RGB samples → xy coords
+        Y_lab = [rgb_to_lab_normalized(rgb) for rgb in observed_rgbs_list]
 
-    # observed_lab_data = np.array([rgb_to_lab(rgb) for rgb in observed_rgbs_list])
-    # tree = KDTree(observed_lab_data)
+        # observed_lab_data = np.array([rgb_to_lab(rgb) for rgb in observed_rgbs_list])
+        # tree = KDTree(observed_lab_data)
 
-    # visualize collected data
-    if __name__ == "__main__":
+        # visualize collected data
+        if __name__ == "__main__":
+            import matplotlib.pyplot as plt
+            
+            red_zero_mask = input_rgbs[:, 0] == 0
+            green_zero_mask = input_rgbs[:, 1] == 0
+            blue_zero_mask = input_rgbs[:, 2] == 0
+
+            red_only_mask = green_zero_mask & blue_zero_mask
+            green_only_mask = red_zero_mask & blue_zero_mask
+            blue_only_mask = red_zero_mask & green_zero_mask
+
+            red_only_inputs = input_rgbs[red_only_mask]/2**16
+            green_only_inputs = input_rgbs[green_only_mask]/2**16
+            blue_only_inputs = input_rgbs[blue_only_mask]/2**16
+
+            red_only_outputs = observed_rgbs[red_only_mask]
+            green_only_outputs = observed_rgbs[green_only_mask]
+            blue_only_outputs = observed_rgbs[blue_only_mask]
+
+            plt.figure(figsize=(9, 4))
+            plt.subplot(1, 3, 1)
+            plt.scatter(red_only_inputs[:, 0], red_only_outputs[:, 0], color = "red")
+            plt.scatter(red_only_inputs[:, 0], red_only_outputs[:, 1], color = "green")
+            plt.scatter(red_only_inputs[:, 0], red_only_outputs[:, 2], color = "blue")
+            plt.title("red 0 - 255")
+            plt.xlim((-0.01, 1.01))
+            plt.ylim([-1, 256])
+
+            plt.subplot(1, 3, 2)
+            plt.scatter(green_only_inputs[:, 1], green_only_outputs[:, 0], color = "red")
+            plt.scatter(green_only_inputs[:, 1], green_only_outputs[:, 1], color = "green")
+            plt.scatter(green_only_inputs[:, 1], green_only_outputs[:, 2], color = "blue")
+            plt.title("green 0 - 255")
+            plt.ylim([-1, 256])
+            plt.xlim((-0.01, 1.01))
+
+            plt.subplot(1, 3, 3)
+            plt.scatter(blue_only_inputs[:, 2], blue_only_outputs[:, 0], color = "red")
+            plt.scatter(blue_only_inputs[:, 2], blue_only_outputs[:, 1], color = "green")
+            plt.scatter(blue_only_inputs[:, 2], blue_only_outputs[:, 2], color = "blue")
+            plt.title("blue 0 - 255")
+            plt.ylim([-1, 256])
+            plt.xlim((-0.01, 1.01))
+
+            plt.show()
         
-        red_zero_mask = input_rgbs[:, 0] == 0
-        green_zero_mask = input_rgbs[:, 1] == 0
-        blue_zero_mask = input_rgbs[:, 2] == 0
-
-        red_only_mask = green_zero_mask & blue_zero_mask
-        green_only_mask = red_zero_mask & blue_zero_mask
-        blue_only_mask = red_zero_mask & green_zero_mask
-
-        red_only_inputs = input_rgbs[red_only_mask]/2**16
-        green_only_inputs = input_rgbs[green_only_mask]/2**16
-        blue_only_inputs = input_rgbs[blue_only_mask]/2**16
-
-        red_only_outputs = observed_rgbs[red_only_mask]
-        green_only_outputs = observed_rgbs[green_only_mask]
-        blue_only_outputs = observed_rgbs[blue_only_mask]
-
-        plt.figure(figsize=(9, 4))
-        plt.subplot(1, 3, 1)
-        plt.scatter(red_only_inputs[:, 0], red_only_outputs[:, 0], color = "red")
-        plt.scatter(red_only_inputs[:, 0], red_only_outputs[:, 1], color = "green")
-        plt.scatter(red_only_inputs[:, 0], red_only_outputs[:, 2], color = "blue")
-        plt.title("red 0 - 255")
-        plt.xlim((-0.01, 1.01))
-        plt.ylim([-1, 256])
-
-        plt.subplot(1, 3, 2)
-        plt.scatter(green_only_inputs[:, 1], green_only_outputs[:, 0], color = "red")
-        plt.scatter(green_only_inputs[:, 1], green_only_outputs[:, 1], color = "green")
-        plt.scatter(green_only_inputs[:, 1], green_only_outputs[:, 2], color = "blue")
-        plt.title("green 0 - 255")
-        plt.ylim([-1, 256])
-        plt.xlim((-0.01, 1.01))
-
-        plt.subplot(1, 3, 3)
-        plt.scatter(blue_only_inputs[:, 2], blue_only_outputs[:, 0], color = "red")
-        plt.scatter(blue_only_inputs[:, 2], blue_only_outputs[:, 1], color = "green")
-        plt.scatter(blue_only_inputs[:, 2], blue_only_outputs[:, 2], color = "blue")
-        plt.title("blue 0 - 255")
-        plt.ylim([-1, 256])
-        plt.xlim((-0.01, 1.01))
-
-        plt.show()
-    
-    ## machine learning
-    inverse_model = MLPRegressor(hidden_layer_sizes=(64, 64), max_iter=1000)
-    inverse_model.out_activation_ = "relu"
-    inverse_model.fit(Y_lab, X_rgbw)  # Predict RGBW from target Lab
-
-    # save
-    with open(model_name,'wb') as f:
-        pickle.dump(inverse_model,f)
-else:
-    with open(model_name, 'rb') as f:
-        inverse_model = pickle.load(f)
+        ## machine learning
+        inverse_model = MLPRegressor(hidden_layer_sizes=(64, 64), max_iter=1000)
         inverse_model.out_activation_ = "relu"
+        inverse_model.fit(Y_lab, X_rgbw)  # Predict RGBW from target Lab
+
+        # save
+        with open(model_name,'wb') as f:
+            pickle.dump(inverse_model,f)
+    else:
+        with open(model_name, 'rb') as f:
+            inverse_model = pickle.load(f)
+            inverse_model.out_activation_ = "relu"
 
 
 # def find_distance(target_rgba):
@@ -155,6 +162,10 @@ else:
 
 def correct_color(target_rgba):
     global inverse_model
+    if inverse_model is None:
+        print("Using target rgb, because you need to initialize this module with data!!!!") 
+        pixel_input = (np.clip(target_rgba, 0, 255)*(2**8-1)).round() # not sure about range here...
+        return (int(pixel_input[0]), int(pixel_input[1]) , int(pixel_input[2]))
     inverse_model.out_activation_ = "relu"
     query_point = rgb_to_lab_normalized(target_rgba[:3])
     pixel_input = inverse_model.predict([query_point])[0]
@@ -163,6 +174,16 @@ def correct_color(target_rgba):
 
 def correct_color_from_lab(lab_array):
     global inverse_model
+    if inverse_model is None:
+        print("Using target lab, because you need to initialize this module with data!!!!")
+        target_rgb =[]
+        for i in range(len(lab_array)):
+            lab = lab_array[i]
+            rgb = lab_to_rgb(lab)
+            target_rgb.append(rgb)
+        pixel_input = (np.clip(np.array(target_rgb), 0, 1)*(2**16-1)).round() 
+        return pixel_input
+    
     inverse_model.out_activation_ = "relu"
     # lab_array[:, 0] /= 100 # (l/100, (a+128)/255, (b+128)/255)
     lab_array[:, 1] = lab_array[:, 1] + 0.5 # (lab_array[:, 1]+128)/255 # (l/100, (a+128)/255, (b+128)/255)
@@ -172,6 +193,9 @@ def correct_color_from_lab(lab_array):
     return pixel_input
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    init("C:/work/slow_lamp/slowlamp/HD108/")
     # desired_lab = normalize_lab((70, 30, 15))
     desired_lab = Y_lab[100]
     # predicted_rgbw_forest = invert_lab_to_rgbw(desired_lab)

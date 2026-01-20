@@ -28,7 +28,7 @@ def loadConfig(pathtofile):
             return config
             
 #load config data json format
-configData = loadConfig('config.json')
+configData = loadConfig('integrated/config.json')
 
 
 using_pi = configData.get("using_pi")
@@ -55,8 +55,12 @@ if using_pi:
 
     #------------------------Camera Setup---------------------------------------
     from picamera2 import Picamera2
-    tuning = Picamera2.load_tuning_file("/home/slowlamp3/Documents/slowlamp/image_proc/test.json") #imx477
-    camera = Picamera2(tuning=tuning)
+    tuning_file_path = configData.get("camera_tuning_file")
+    if tuning_file_path != "":
+        tuning = Picamera2.load_tuning_file(tuning_file_path) #imx477
+        camera = Picamera2(tuning=tuning)
+    else: 
+        camera = Picamera2()
     # camera.resolution= (2028,1520)
     # camera.preview_configuration.main.format = "RGB888"
     # camera.set_controls({'AnalogueGain': 25.0, 'ExposureTime': 22000})
@@ -98,6 +102,9 @@ if using_HD108:
         num_end = 2 * (len(colors_16bit) + 1) 
         data.extend([0xFF] * num_end)  # End frame
         spi.writebytes(data)
+
+if not diyVersion:
+    correct_color_HD108.init(configData.get("led_color_data_folder"))
 
 led_points = helper_classes.get_led_points_8cm()
 
@@ -566,6 +573,10 @@ def generate_frame_from_trace_tracks(trace, tracks):
     return helper_classes.convert_frame_to_oklab(row_data)
     
 def interpolate_two_frames(key_frame1, key_frame2, animation_length):
+    if animation_length <= 0:
+        animation_plan = np.zeros((1, len(key_frame1)))
+        return animation_plan
+
     key_frames = np.stack([key_frame1, key_frame2], axis = 0)
 
     frame_indices = key_frames[:, 0]
