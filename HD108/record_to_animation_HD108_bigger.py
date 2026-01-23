@@ -70,18 +70,32 @@ plot_cluster = False
 
 nums_per_row = np.array([38, 38, 37, 36, 35, 34, 32, 29, 26, 21, 13])
 led_points = np.zeros((np.sum(nums_per_row), 2))
-for i in range(len(nums_per_row)):
-    row_index = len(nums_per_row)-i-1
-    start_index = np.sum(nums_per_row[row_index:-1])
-    num = nums_per_row[row_index]
-    end_index = start_index + num
-    y = 12*row_index
-    led_points[start_index:end_index, 1] = y
-    x = np.arange(num)*7 -3.5 - num//2*7
-    if row_index%2 == 0:
-        led_points[start_index:end_index, 0] = x
+
+# Horizontal spacing (pitch) and Vertical spacing between rows
+pitch = 7 
+row_spacing = 12
+
+current_index = 0
+
+for i, num in enumerate(nums_per_row):
+    # Calculate indices for the current row
+    end_index = current_index + num
+    
+    # Calculate Y (vertical position)
+    led_points[current_index:end_index, 1] = i * row_spacing
+    
+    # Calculate X (centered at 0)
+    # Total width of this row is (num - 1) * pitch
+    row_width = (num - 1) * pitch
+    x = np.linspace(-row_width/2, row_width/2, num)
+    
+    # Handle Zig-Zag (Reverse every other row)
+    if i % 2 == 1:
+        led_points[current_index:end_index, 0] = x[::-1]
     else:
-        led_points[start_index:end_index, 0] = x[::-1]
+        led_points[current_index:end_index, 0] = x
+        
+    current_index = end_index
 
 print(led_points)
 
@@ -169,8 +183,8 @@ def distribute_leds_to_clusters(led_coordinates, target_counts, other_centers):
     # Combine all centers
     all_centers = [vibrant_center] + other_centers
     # target_counts = [vibrant_count] + list(light_counts)
-    print("all_centers", all_centers)
-    print("target_counts", target_counts)
+    # print("all_centers", all_centers)
+    # print("target_counts", target_counts)
     
     # Initialize cluster assignments
     cluster_assignments = [-1] * num_leds
@@ -362,20 +376,20 @@ with open(record, 'r') as file:
             
         
         counts = np.array([main_count]+[color[0] for color in supp_colors_w_count])
-        print("main_count", main_count)
-        print("counts", counts)
+        # print("main_count", main_count)
+        # print("counts", counts)
         total_count = np.sum(counts)
         counts_percentage = counts/total_count
         max_count_percentage = np.max(counts_percentage)
         light_counts = np.clip((counts_percentage/max_count_percentage*num_per_group), 1, num_per_group).astype(np.int32)
-        print(light_counts)
+        # print(light_counts)
         # vibrant_count = main_count/np.sum(np.array([color[0] for color in supp_colors_w_count]))*np.sum(light_counts)
         # print(vibrant_count, light_counts)
 
         assignments, centers = refine_clusters_iteratively(led_points, light_counts,  other_centroids)
         # Print results
-        print("Cluster assignments:", assignments)
-        print("Cluster centers:", centers)
+        # print("Cluster assignments:", assignments)
+        # print("Cluster centers:", centers)
         
         # Print actual counts per cluster
         all_light_counts = []
@@ -383,7 +397,7 @@ with open(record, 'r') as file:
             count = assignments.count(i)
             all_light_counts.append(count)
             cluster_name = "vibrant" if i == 0 else f"color_{i}"
-            print(f"Cluster {i} ({cluster_name}): {count} LEDs")
+            # print(f"Cluster {i} ({cluster_name}): {count} LEDs")
         all_light_counts = np.array(all_light_counts)
 
         total_watts = base_watt*all_light_counts
@@ -401,7 +415,7 @@ with open(record, 'r') as file:
                 plt.scatter(assigned_positions[:, 0], assigned_positions[:, 1])
             # track.watt = int(base_watt/light_counts[i]*(1+(watt_percentage[i]-counts_percentage[i])/counts_percentage[i]))
             track.watt = int(track_watts[i+1])
-            print(track.position, "watt", track.watt)
+            # print(track.position, "watt", track.watt)
 
         if plot_cluster:
             assigned_indices = np.where(assignments_arr == 0)[0]
@@ -440,7 +454,7 @@ with open(record, 'r') as file:
 key_frames = np.array(key_frames)
 
 key_frame_duration = 1 # seconds
-fps = 10
+fps = 15
 
 # start_color_oklab = colour.convert(start_color_rgb, "sRGB", "Oklab")
 last_color = np.zeros((len(header)))
@@ -479,10 +493,10 @@ for i in range(1, len(header), 4):
         lab_full.append(color_lab)
 
     lab_full = np.array(lab_full)
-    print(lab_full[0])
+    # print(lab_full[0])
     
     input_pixels = correct_color_HD108.correct_color_from_lab(lab_full)
-    print(input_pixels[0])
+    # print(input_pixels[0])
 
     input_brightness = np.clip((watt/base_watt)*10, 1, 10)
     animation_brightness = interpolate_non_zeros_stretched(frame_indices, input_brightness, time_arr)
@@ -534,6 +548,7 @@ for f in animation_plan:
     send_hd108_colors_with_brightness(frame)
     time.sleep(1/fps)
 
+np.savez("animation_plan.npz", animation_plan=animation_plan)
 
 colors_16bit = [(1, 0, 0, 0)]*num_leds
 send_hd108_colors_with_brightness(colors_16bit)
