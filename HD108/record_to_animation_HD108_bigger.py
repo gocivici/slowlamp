@@ -69,6 +69,7 @@ plot_cluster = False
 # exit()
 
 nums_per_row = np.array([38, 38, 37, 36, 35, 34, 32, 29, 26, 21, 13])
+nums_per_row = nums_per_row[::-1]
 led_points = np.zeros((np.sum(nums_per_row), 2))
 
 # Horizontal spacing (pitch) and Vertical spacing between rows
@@ -98,6 +99,12 @@ for i, num in enumerate(nums_per_row):
     current_index = end_index
 
 print(led_points)
+
+# plt.figure()
+# colors = np.ones((len(led_points), 3))
+# colors[:, 1] = np.linspace(0, 1, len(led_points))
+# plt.scatter(led_points[:, 0], led_points[:, 1], c = colors)
+# plt.show()
 
 num_leds = len(led_points)
 base_watt = 70
