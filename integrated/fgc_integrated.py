@@ -251,7 +251,10 @@ def dominantColor(waitTime):
 
     print("Waiting seconds or a 'c' key press:", waitTime)
     if waitTime > 0:
-        smart_delay(waitTime)
+        if display_cv2_window:
+            smart_delay(waitTime)
+        else:
+            time.sleep(waitTime)
         
     # Get the current time in seconds since the epoch
     start_time_seconds = time.time()
