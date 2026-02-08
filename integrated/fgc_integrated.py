@@ -37,10 +37,11 @@ using_pi = configData.get("using_pi")
 day_length = configData.get("day_length") # minutes
 animation_fps = configData.get("animation_fps") #inverse seconds
 using_HD108 = configData.get("using_HD108")
+has_animation = configData.get("has_animation")
 diyVersion = configData.get("diyVersion")
 display_cv2_window = configData.get("display_cv2_window")
 
-if not diyVersion:
+if has_animation:
     import correct_color_HD108
 
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -115,8 +116,18 @@ if using_HD108:
         data.extend([0xFF] * num_end)  # End frame
         spi.writebytes(data)
 
-if not diyVersion:
+if has_animation:
     correct_color_HD108.init(configData.get("led_color_data_folder"))
+
+cap = None
+if not using_pi:
+    # Initialize the camera module
+    cap = cv2.VideoCapture(0)
+
+    # Check if the camera is initialized correctly
+    if not cap.isOpened():
+        print("Cannot open camera")
+        exit()
 
 led_points = helper_classes.get_led_points_8cm()
 
@@ -186,6 +197,49 @@ def capture_image():
 def to_cv2_color(color):
     return (int(color[2]), int(color[1]), int(color[0]))
 
+def clean_exit():
+    if not using_pi:
+    # Release the camera resources
+        cap.release()
+    # else:
+        # neopixels.fill( (0, 0, 0))
+
+    if display_cv2_window:
+        cv2.destroyAllWindows()
+
+    if using_HD108:
+        colors_16bit = [(1, 0, 0, 0)]*num_leds
+        send_hd108_colors_with_brightness(colors_16bit)
+        send_hd108_colors_with_brightness(colors_16bit)
+        spi.close()
+
+    storage_file.flush()
+    storage_file.close()
+    exit()
+
+def smart_delay(waitTime_seconds):
+    """
+    Waits for waitTime_seconds, but breaks early if 'c' is pressed.
+    Exits the program if 'q' is pressed,
+    Returns True if 'c' was pressed, False if it timed out.
+    """
+    start_time = time.time()
+    
+    while (time.time() - start_time) < waitTime_seconds:
+        # 1. Take a 1ms break to check for keyboard input
+        key = cv2.waitKey(1) & 0xFF
+        
+        # 2. Check if the 'c' key was pressed
+        if key == ord('c'):
+            print("User triggered capture early!")
+            return True
+            
+        # 3. (Optional) Check if 'q' was pressed to exit the app entirely
+        if key == ord('q'):
+            clean_exit()
+
+    return False
+
 def dominantColor(waitTime):
     # time.sleep(waitTime)
     global previous_img, stored_traces
@@ -195,10 +249,10 @@ def dominantColor(waitTime):
 
     prev_preview = resize_to_max(previous_img, feed_preview_size)
 
-    print("Waiting seconds:", waitTime)
+    print("Waiting seconds or a 'c' key press:", waitTime)
     if waitTime > 0:
-        time.sleep(waitTime) 
-
+        smart_delay(waitTime)
+        
     # Get the current time in seconds since the epoch
     start_time_seconds = time.time()
 
@@ -264,7 +318,7 @@ def dominantColor(waitTime):
         trace = helper_classes.Trace(vibrant_color, 0, traces_storing_mode="vaooo", supplemental_colors=[largest_color]*4, supplemental_counts = [0]*4)
         stored_traces.append(trace)
         storage_file.writelines([trace.print_trace()])
-        if not diyVersion:
+        if has_animation:
             trace_queue.put(trace)
         time_elapsed = time.time() - start_time_seconds  
         return (largest_color, 0), (vibrant_color, 0),  time_elapsed
@@ -342,10 +396,12 @@ def dominantColor(waitTime):
     stored_traces.append(trace)
     storage_file.writelines([trace.print_trace()])
     storage_file.flush()
-    if not diyVersion:
+    if has_animation:
         trace_queue.put(trace)
     if len(stored_traces) > 23:
         stored_traces = stored_traces[-23:]
+
+
     if display_cv2_window:
         # display some stuff
         canvas = np.ones((500, 800, 3)).astype(np.uint8)
@@ -373,8 +429,6 @@ def dominantColor(waitTime):
         angle_per_swatch = 360/24
         for i, trace in enumerate(stored_traces):
             # swatch = trace.paint_trace()
-            
-            
             supp_colors = trace.supplemental_colors
             for j in range(len(supp_colors)):
                 r = (ambient_radius-vibrant_radius)//len(supp_colors)*(len(supp_colors)-j) + vibrant_radius
@@ -467,18 +521,12 @@ def saveComposition(largest_color_count, vibrant_color_count, file_prefix = "com
                         (int(vr_color[2]), int(vr_color[1]), int(vr_color[0]), int(vr_color[3])), thickness=-1)
     cv2.imwrite(image_file, canvas)
 
-cap = None
-if not using_pi:
-    # Initialize the camera module
-    cap = cv2.VideoCapture(0)
-
-    # Check if the camera is initialized correctly
-    if not cap.isOpened():
-        print("Cannot open camera")
-        exit()
-
-
 def capture_thread_target():
+    if display_cv2_window:
+        # display some stuff
+        canvas = np.ones((500, 800, 3)).astype(np.uint8)
+        cv2.imshow('frame', canvas)
+
     time_elapsed = 0 
 
     while True:
@@ -706,7 +754,7 @@ def animation_thread_target():
                 progress = 0
                 animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)        
 
-if not diyVersion:        
+if has_animation:        
     # capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
     animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
 
@@ -724,20 +772,4 @@ capture_thread_target()
 
 print("Main: All threads finished.")
 
-if not using_pi:
-    # Release the camera resources
-    cap.release()
-# else:
-    # neopixels.fill( (0, 0, 0))
-
-if display_cv2_window:
-    cv2.destroyAllWindows()
-
-if using_HD108:
-    colors_16bit = [(1, 0, 0, 0)]*num_leds
-    send_hd108_colors_with_brightness(colors_16bit)
-    send_hd108_colors_with_brightness(colors_16bit)
-    spi.close()
-
-storage_file.flush()
-storage_file.close()
+clean_exit()

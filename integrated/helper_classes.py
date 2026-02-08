@@ -53,6 +53,39 @@ def get_led_points_8cm():
     # print(led_points)
     return led_points
 
+def get_led_points_10inch():
+    nums_per_row = np.array([38, 38, 37, 36, 35, 34, 32, 29, 26, 21, 13])
+    nums_per_row = nums_per_row[::-1]
+    led_points = np.zeros((np.sum(nums_per_row), 2))
+
+    # Horizontal spacing (pitch) and Vertical spacing between rows
+    pitch = 7 
+    row_spacing = 12
+
+    current_index = 0
+
+    for i, num in enumerate(nums_per_row):
+        # Calculate indices for the current row
+        end_index = current_index + num
+        
+        # Calculate Y (vertical position)
+        led_points[current_index:end_index, 1] = i * row_spacing
+        
+        # Calculate X (centered at 0)
+        # Total width of this row is (num - 1) * pitch
+        row_width = (num - 1) * pitch
+        x = np.linspace(-row_width/2, row_width/2, num)
+        
+        # Handle Zig-Zag (Reverse every other row)
+        if i % 2 == 1:
+            led_points[current_index:end_index, 0] = x[::-1]
+        else:
+            led_points[current_index:end_index, 0] = x
+            
+        current_index = end_index
+
+    return led_points
+
 class ColorTrack:
     def __init__(self, color, count, base_watt, position_group = 0):
         self.color = np.array(color)

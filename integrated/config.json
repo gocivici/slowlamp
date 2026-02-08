@@ -4,6 +4,7 @@
     "animation_fps" : 0.25,
     "using_HD108" : false,
     "diyVersion" : false,
+    "has_animation": false,
     "display_cv2_window" : true,
     "led_color_data_folder": "/home/slowlamp3/Documents/slowlamp/HD108/",
     "camera_tuning_file": "/home/slowlamp3/Documents/slowlamp/image_proc/test.json"
