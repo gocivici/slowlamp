@@ -1,7 +1,9 @@
 from datetime import datetime
 import numpy as np
 from scipy.spatial.distance import cdist
-
+import cv2
+import copy
+from sklearn.cluster import KMeans
 import colour 
 
 color_swatch_size = 40
@@ -294,3 +296,101 @@ main_color (rgb) #{self.main_count}: ({int(self.main_color[0])}, {int(self.main_
                 swatch[:, color_swatch_size*(i+1): color_swatch_size*(i+2)] = color[::-1]
 
         return swatch
+    
+
+def resize_to_max(image, resize_max):
+
+    h, w, = image.shape[:-1]
+    if h>w:
+        factor = resize_max/h
+    else:
+        factor = resize_max/w
+
+    image = cv2.resize(image, None, fx=factor, fy=factor, interpolation=cv2.INTER_LINEAR)
+
+    return image
+
+def extract_colors_kmeans(image, num_colors, resize=True, resize_max=200, color_mode="bgr"):
+
+    if resize:
+        image = resize_to_max(image, resize_max)
+
+    if color_mode == "lab":
+        # print("lab mode")
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+
+    img_np = copy.copy(image)
+    pixels = img_np.reshape(-1, 3)
+
+    # Fit KMeans to pixel data
+    kmeans = KMeans(n_clusters=num_colors, random_state=42)
+    kmeans.fit(pixels)
+
+    labels = kmeans.predict(pixels)
+
+    label_counts = np.bincount(labels)
+
+    # Get dominant colors
+    colors = kmeans.cluster_centers_.astype(int)
+    if color_mode == "lab":
+        rgb_colors = cv2.cvtColor(np.array([colors]).astype(np.uint8), cv2.COLOR_LAB2RGB)[0]
+        return rgb_colors, label_counts
+    return colors, label_counts
+
+def ciede2000(lab1, lab2):
+    L1, a1, b1 = lab1
+    L2, a2, b2 = lab2
+    
+    avg_L = (L1 + L2) / 2.0
+    C1 = np.sqrt(a1**2 + b1**2)
+    C2 = np.sqrt(a2**2 + b2**2)
+    avg_C = (C1 + C2) / 2.0
+    G = 0.5 * (1 - np.sqrt(avg_C**7 / (avg_C**7 + 25**7)))
+    
+    a1_prime = a1 * (1 + G)
+    a2_prime = a2 * (1 + G)
+    C1_prime = np.sqrt(a1_prime**2 + b1**2)
+    C2_prime = np.sqrt(a2_prime**2 + b2**2)
+    avg_C_prime = (C1_prime + C2_prime) / 2.0
+    
+    h1_prime = np.degrees(np.arctan2(b1, a1_prime))
+    h2_prime = np.degrees(np.arctan2(b2, a2_prime))
+    h1_prime += 360 if h1_prime < 0 else 0
+    h2_prime += 360 if h2_prime < 0 else 0
+    
+    avg_H_prime = (h1_prime + h2_prime + 360) / 2.0 if np.abs(h1_prime - h2_prime) > 180 else (h1_prime + h2_prime) / 2.0
+    T = 1 - 0.17 * np.cos(np.radians(avg_H_prime - 30)) + 0.24 * np.cos(np.radians(2 * avg_H_prime)) + 0.32 * np.cos(np.radians(3 * avg_H_prime + 6)) - 0.20 * np.cos(np.radians(4 * avg_H_prime - 63))
+    
+    delta_h_prime = h2_prime - h1_prime
+    delta_h_prime -= 360 if delta_h_prime > 180 else 0
+    delta_h_prime += 360 if delta_h_prime < -180 else 0
+    
+    delta_L_prime = L2 - L1
+    delta_C_prime = C2_prime - C1_prime
+    delta_H_prime = 2 * np.sqrt(C1_prime * C2_prime) * np.sin(np.radians(delta_h_prime) / 2.0)
+    
+    S_L = 1 + ((0.015 * (avg_L - 50)**2) / np.sqrt(20 + (avg_L - 50)**2))
+    S_C = 1 + 0.045 * avg_C_prime
+    S_H = 1 + 0.015 * avg_C_prime * T
+    
+    R_T = -2 * np.sqrt(avg_C_prime**7 / (avg_C_prime**7 + 25**7)) * np.sin(np.radians(60 * np.exp(-(((avg_H_prime - 275) / 25)**2))))
+    
+    delta_E = np.sqrt((delta_L_prime / S_L)**2 + (delta_C_prime / S_C)**2 + (delta_H_prime / S_H)**2 + R_T * (delta_C_prime / S_C) * (delta_H_prime / S_H))
+    return delta_E
+
+
+class FastTrack:
+    def __init__(self, color, count):
+        self.color = np.array(color)
+        self.age = 0
+        self.missed = 0
+        self.count = count
+
+    def update(self, new_color, new_count, alpha=0.3):
+        self.color = (1 - alpha) * self.color + alpha * np.array(new_color)
+        self.count = (1 - alpha) * self.count + alpha * new_count
+        self.missed = 0
+        self.age += 1
+
+    def print_swatch(self):
+        return self.color, str(self.count), "+"*self.age, "-"*self.missed
