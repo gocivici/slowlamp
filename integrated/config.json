@@ -3,7 +3,7 @@
     "day_length" : 60,
     "animation_fps" : 0.25,
     "fast_stream_interval": 10,
-    "using_HD108" : false,
+    "using_HD108" : true,
     "diyVersion" : false,
     "has_animation": true,
     "display_cv2_window" : true,
