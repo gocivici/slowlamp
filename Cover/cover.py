@@ -71,13 +71,14 @@ def get_existing_blocks(filename, block_w=4, block_h=3):
 # main save function
 def save(VibrantColor, pixelCountVC, color2, pixelCountColor2, 
                         color3, pixelCountColor3, color4, pixelCountColor4, 
-                        color5, pixelCountColor5, TimeStamp):
+                        color5, pixelCountColor5, TimeStamp, isFastTrack=False):
     
     # define grid size
     BLOCK_W = 4
     BLOCK_H = 3
     BLOCKS_PER_ROW = 24  # new row after 24 blocks
 
+    status_pixel = (255, 255, 0, 255) if isFastTrack else (75, 0, 130, 255)
     # create the New Data Block   
     new_block = [
         # Row 1
@@ -96,7 +97,7 @@ def save(VibrantColor, pixelCountVC, color2, pixelCountColor2,
         encode_24bit_pixel(pixelCountColor4), 
         encode_color_pixel(color4), 
         encode_24bit_pixel(pixelCountColor3), 
-        (75, 0, 130, 255)                        
+        status_pixel                        
     ]
 
     # get existing records
