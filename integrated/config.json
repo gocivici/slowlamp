@@ -2,7 +2,7 @@
     "using_pi": true,
     "day_length" : 60,
     "animation_fps" : 0.25,
-    "fast_stream_interval": 10,
+    "fast_stream_interval": 9,
     "using_HD108" : true,
     "diyVersion" : false,
     "has_animation": true,

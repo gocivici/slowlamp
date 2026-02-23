@@ -600,10 +600,12 @@ def dominantColor(waitTime):
     # cv2.imwrite('previm.png', previous_img)
     
     if fast_count == 0:
+        isFastTrack = False
         needed_clusters = 5
         diff_preview, vibrant_color, vr_count, supplemental_colors, supplemental_counts = get_colors_from_difference(current_img, previous_img, needed_clusters)
     else:
         needed_clusters = 4
+        isFastTrack = True
         diff_preview, supplemental_colors, supplemental_counts = get_colors_from_difference(current_img, previous_img, needed_clusters, separate_vibrant = False)
         vibrant_color = fast_vr_color
         vr_count = fast_count
@@ -637,7 +639,7 @@ def dominantColor(waitTime):
             tuple(supplemental_colors[0][:-1]), supplemental_counts[0], tuple(supplemental_colors[1][:-1]), supplemental_counts[1],
             tuple(supplemental_colors[2][:-1]), supplemental_counts[2], tuple(supplemental_colors[3][:-1]), supplemental_counts[3], int(time.time()//3600)]
     print(record)
-    cover.save(*record)
+    cover.save(*record, isFastTrack=isFastTrack)
 
     previous_img = current_img
 
