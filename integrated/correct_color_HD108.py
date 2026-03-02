@@ -33,7 +33,9 @@ def gamma_correct(i, gamma=2.4):
 def lab_to_rgb(lab):
     lab = LabColor(lab[0], lab[1], lab[2])
     srgb = convert_color(lab, sRGBColor)
-    return (srgb.r, srgb.g, srgb.b)
+    if srgb.is_upscaled:
+        return (srgb.rgb_r/255, srgb.rgb_g/255, srgb.rgb_b/255)
+    return (srgb.rgb_r, srgb.rgb_g, srgb.rgb_b)
 
 inverse_model = None
 Y_lab = None

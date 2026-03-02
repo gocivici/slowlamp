@@ -98,7 +98,41 @@ for i, num in enumerate(nums_per_row):
         
     current_index = end_index
 
+def get_led_points_23cm():
+    nums_per_row = np.array([8, 16, 21, 24, 27, 29, 30, 31, 32, 32, 31, 30, 29, 27, 24, 21, 16, 8 ])
+    nums_per_row = nums_per_row[::-1]
+    led_points = np.zeros((np.sum(nums_per_row), 2))
+
+    # Horizontal spacing (pitch) and Vertical spacing between rows
+    pitch = 7 
+    row_spacing = 12
+    
+    current_index = 0
+    for i, num in enumerate(nums_per_row):
+        # Calculate indices for the current row
+        end_index = current_index + num
+        
+        # Calculate Y (vertical position)
+        led_points[current_index:end_index, 1] = i * row_spacing
+        
+        # Calculate X (centered at 0)
+        # Total width of this row is (num - 1) * pitch
+        row_width = (num - 1) * pitch
+        x = np.linspace(-row_width/2, row_width/2, num)
+        
+        # Handle Zig-Zag (Reverse every other row)
+        if i % 2 == 1:
+            led_points[current_index:end_index, 0] = x[::-1]
+        else:
+            led_points[current_index:end_index, 0] = x
+            
+        current_index = end_index
+
+    return led_points
+
+led_points = get_led_points_23cm()
 print(led_points)
+print(len(led_points))
 
 # plt.figure()
 # colors = np.ones((len(led_points), 3))
@@ -443,7 +477,7 @@ with open(record, 'r') as file:
                 row_data[header.index(light+"G")] = track.color[1]/255
                 row_data[header.index(light+"B")] = track.color[2]/255
         
-        main_watt = np.sum(track_watts)*main_count/np.sum(np.array([color[0] for color in supp_colors_w_count]))
+        main_watt = 2*np.sum(track_watts)*main_count/np.sum(np.array([color[0] for color in supp_colors_w_count]))
         print(main_watt)
         
         for pos in np.where(assignments_arr == 0)[0]:
@@ -545,17 +579,18 @@ def send_hd108_colors_with_brightness(colors_16bit):
         
     num_end = 2 * (len(colors_16bit) + 1) 
     data.extend([0xFF] * num_end)  # End frame
-    spi.writebytes(data)
+    spi.writebytes2(data)
 
 print(animation_plan[0])
 print(animation_plan[-10])
+
+np.savez("animation_plan.npz", animation_plan=animation_plan)
 
 for f in animation_plan:
     frame = f[1:].reshape(-1, 4)/3
     send_hd108_colors_with_brightness(frame)
     time.sleep(1/fps)
 
-np.savez("animation_plan.npz", animation_plan=animation_plan)
 
 colors_16bit = [(1, 0, 0, 0)]*num_leds
 send_hd108_colors_with_brightness(colors_16bit)

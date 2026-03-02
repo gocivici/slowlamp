@@ -69,7 +69,8 @@ if using_pi:
             camera = Picamera2(tuning=tuning)
         else: 
             camera = Picamera2()
-        exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
+        # exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
+        exposure_time = [1000000, 250000, 62500] #for testing
     else:
         camera = Picamera2()
         exposure_time = [62500]
@@ -97,9 +98,10 @@ if using_HD108:
         data = []
         data.extend([0x00] * 8)  # Start frame: HD108 protocol requires 64-bit start frame before LED data
         
-        for brightness, r16, g16, b16 in list(colors_16bit):
+        for led_i, (brightness, r16, g16, b16) in enumerate(list(colors_16bit)):
             brightness, r16, g16, b16 = map(int, (brightness, r16, g16, b16))
-            
+            if led_i > 390:
+                print("int values for LED", led_i, ": ",  brightness, r16, g16, b16)
             # print(int(r16/255), int(g16/255), int(b16/255))
             if brightness <= 0:
                 brightness_frame = (1 << 15) | (1 << 10) | (1 << 5) | 1
@@ -115,7 +117,7 @@ if using_HD108:
             
         num_end = 2 * (len(colors_16bit) + 1) 
         data.extend([0xFF] * num_end)  # End frame
-        spi.writebytes(data)
+        spi.writebytes2(data)
 
 if has_animation:
     correct_color_HD108.init(configData.get("led_color_data_folder"))
@@ -906,7 +908,7 @@ def animation_thread_target():
                     # move to the next animation frame
                     if progress < len(animation_plan):
                         f = animation_plan[progress]
-                        frame = f[1:].reshape(-1, 4)/3
+                        frame = f[1:].reshape(-1, 4)
                         if using_HD108:
                             send_hd108_colors_with_brightness(frame)
                         print("----------", progress)
