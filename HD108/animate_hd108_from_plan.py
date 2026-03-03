@@ -30,18 +30,18 @@ def send_hd108_colors_with_brightness(colors_16bit):
         
     num_end = 2 * (len(colors_16bit) + 1) 
     data.extend([0xFF] * num_end)  # End frame
-    spi.writebytes(data)
+    spi.writebytes2(data)
 
 
-animation_plan = np.load("animation_plan.npz")["animation_plan"]
-fps = 15
+animation_plan = np.load("animation_plan_23cm.npz")["animation_plan"]
+fps = 5
 
-
-for f in animation_plan:
-    frame = f[1:].reshape(-1, 4)/3
-    num_leds = len(frame)
-    send_hd108_colors_with_brightness(frame)
-    time.sleep(1/fps)
+while True:
+    for f in animation_plan:
+        frame = f[1:].reshape(-1, 4)/3
+        num_leds = len(frame)
+        send_hd108_colors_with_brightness(frame)
+        time.sleep(1/fps)
 
 # np.savez("animation_plan.npz", animation_plan=animation_plan)
 

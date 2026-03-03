@@ -7,16 +7,16 @@ import os
 
 from colormath.color_objects import LabColor, sRGBColor, LCHabColor
 from colormath.color_conversions import convert_color
-from correct_color_HD108 import correct_color
-
+import correct_color_HD108_white
 import spidev
 
-num_leds = 55
+num_leds = 436
+correct_color_HD108_white.init("/home/slowlamp4/Documents/slowlamp/")
 
-import board
-import neopixel
+# import board
+# import neopixel
 
-pixels = neopixel.NeoPixel(board.D18, num_leds, brightness=0.3, pixel_order = neopixel.GRBW)
+# pixels = neopixel.NeoPixel(board.D18, num_leds, brightness=0.3, pixel_order = neopixel.GRBW)
 
 spi = spidev.SpiDev()
 spi.open(0, 0)                                            # Open SPI bus 0, device 0
@@ -46,7 +46,7 @@ def send_hd108_colors(colors_16bit, global_brightness=5):
         
     num_end = 2 * (len(colors_16bit) + 1) 
     data.extend([0xFF] * num_end)  # End frame
-    spi.writebytes(data)
+    spi.writebytes2(data)
     
     
 for r in list(range(0, 255, 64))+[255]:
@@ -73,8 +73,8 @@ for r in list(range(0, 255, 64))+[255]:
 
 			res = cv2.waitKey(0)
             
-			print("corrected_color", correct_color((r, g, b, 255)))
-			corrected_colors_16bit = [correct_color((r, g, b, 255))]*num_leds
+			print("corrected_color", correct_color_HD108_white.correct_color((r, g, b, 255)))
+			corrected_colors_16bit = [correct_color_HD108_white.correct_color((r, g, b, 255))]*num_leds
 			send_hd108_colors(corrected_colors_16bit)
 			send_hd108_colors(corrected_colors_16bit)
 
@@ -92,5 +92,5 @@ for r in list(range(0, 255, 64))+[255]:
 colors_16bit = [(0, 0, 0)]*num_leds
 send_hd108_colors(colors_16bit, global_brightness = 1)
 send_hd108_colors(colors_16bit, global_brightness = 1)
-pixels.fill((0,0,0,0))
+# pixels.fill((0,0,0,0))
 spi.close()

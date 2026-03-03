@@ -13,8 +13,9 @@ picam2 = None
 if using_pi:
     from picamera2 import Picamera2
     # picamera2 needs numpy 1 seems like
-    tuning = Picamera2.load_tuning_file("/home/slowlamp2/Documents/slowlamp/image_proc/test.json") 
-    picam2 = Picamera2(tuning=tuning)
+    # tuning = Picamera2.load_tuning_file("/home/slowlamp4/Documents/slowlamp/image_proc/test.json") 
+    # picam2 = Picamera2(tuning=tuning)
+    picam2 = Picamera2()
     picam2.preview_configuration.main.size = (1280,720)
     picam2.preview_configuration.main.format = "RGB888"
     picam2.preview_configuration.align()
@@ -22,7 +23,7 @@ if using_pi:
 
     picam2.set_controls({'AwbEnable': False})
     picam2.set_controls({'AeEnable': False})
-    picam2.set_controls({'AnalogueGain': 7.5, 'ExposureTime': 15000})
+    picam2.set_controls({'AnalogueGain': 1, 'ExposureTime': 5000})
 
     picam2.start()
 
@@ -118,8 +119,9 @@ def send_hd108_colors(colors_16bit, global_brightness=4):
         
     num_end = 2 * (len(colors_16bit) + 1) 
     data.extend([0xFF] * num_end)  # End frame
-    spi.writebytes(data)
+    spi.writebytes2(data)
     
+num_leds = 436
 
 # Display the camera feed
 while test_index < len(pixel_colors):
@@ -127,8 +129,8 @@ while test_index < len(pixel_colors):
     upscaled = (test_color[0]*2**8, test_color[1]*2**7, test_color[2]*2**7) #875 for uncorrected
     # upscaled = (gamma_correct(upscaled[0]), gamma_correct(upscaled[1]), gamma_correct(upscaled[2]))
     if using_pi:
-        send_hd108_colors([upscaled]*11)
-        send_hd108_colors([upscaled]*11)
+        send_hd108_colors([upscaled]*num_leds)
+        send_hd108_colors([upscaled]*num_leds)
     
     time.sleep(0.6)
 
@@ -136,6 +138,13 @@ while test_index < len(pixel_colors):
 
     if using_pi:
         frame = picam2.capture_array()
+        float_frame = np.astype(frame, np.float32)
+        float_frame[:, :, 0] *= 0.7
+        float_frame[:, :, 1] *= 0.8
+        float_frame /= 0.7
+        float_frame = np.clip(float_frame, 0, 255)
+        frame = np.astype(float_frame, np.uint8)
+        
     else:
         ret, frame = cap.read()
 
@@ -164,10 +173,10 @@ if not using_pi:
     cap.release()
     cv2.destroyAllWindows()
 else:
-    colors_16bit = [(0, 0, 0)]*11
+    colors_16bit = [(0, 0, 0)]*num_leds
     send_hd108_colors(colors_16bit, global_brightness = 1)
     send_hd108_colors(colors_16bit, global_brightness = 1)
     time.sleep(1)
     spi.close()
 
-np.savez("pairings-32-white_HD108_877_with_light.npz", pixel_colors = pixel_colors, result_colors = result_colors)
+np.savez("pairings-32-white_HD108_877_test.npz", pixel_colors = pixel_colors, result_colors = result_colors)
