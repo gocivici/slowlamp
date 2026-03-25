@@ -21,20 +21,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
           bundler-cache: true
+          working-directory: './docs' 
+          
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
       
       - name: Build with Jekyll
         run: |
+          cd docs # Moves into the docs folder before building
           bundle exec jekyll build \
-            --source ./docs \
-            --destination ./_site \
+            --destination ../_site \
             --baseurl "${{ steps.pages.outputs.base_path }}"
         env:
           JEKYLL_ENV: production
