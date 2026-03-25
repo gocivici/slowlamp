@@ -12,7 +12,8 @@ def drawSpiral(spiral_data, img_size=240, min_radius=40, max_radius=120, interva
     canvas = np.zeros((img_size, img_size, 3), dtype=np.uint8)
     circle_center = (img_size // 2, img_size // 2)
     slices_per_day = (24 * 60) / interval_minutes
-    angle_per_slice = 360 / slices_per_day
+    angle_per_slice = 360 / slices_per_day  # angular step between entries
+    arc_sweep = 360 / 24  # fixed 15-degree arc width for visual clarity
 
 
     spiral_data.sort(key=lambda x: x['timestamp'])
@@ -51,14 +52,14 @@ def drawSpiral(spiral_data, img_size=240, min_radius=40, max_radius=120, interva
         
         cv2.ellipse(
             canvas, circle_center, (radius, radius),
-            draw_angle_deg, 0, angle_per_slice, trace_ambient, -1
+            draw_angle_deg, 0, arc_sweep, trace_ambient, -1
         )
 
 
         vibrant_radius = int(radius * 0.5) if radius < thickness else int(radius - (thickness * 0.5))
         cv2.ellipse(
             canvas, circle_center, (vibrant_radius, vibrant_radius),
-            draw_angle_deg, 0, angle_per_slice, trace_vibrant, -1
+            draw_angle_deg, 0, arc_sweep, trace_vibrant, -1
         )
 
     last_entry = spiral_data[-1]
