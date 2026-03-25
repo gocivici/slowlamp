@@ -71,9 +71,9 @@ if using_pi:
         exposure_time = [3000000, 2000000, 1000000, 500000, 250000, 125000, 62500]
     else:
         camera = Picamera2()
-        exposure_time = [62500]
+        exposure_time = [3000000,500000,62500]
 
-    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (2028,1520)}, controls={"AwbEnable":0, "AwbMode": 3}) #DaylightMode=4, indoor=3
+    config = camera.create_still_configuration(main={"format": 'RGB888', "size":  (800,600)}, controls={"AwbEnable":0, "AwbMode": 3}) #DaylightMode=4, indoor=3
     camera.configure(config) 
 
     # camera.resolution= (2028,1520)
