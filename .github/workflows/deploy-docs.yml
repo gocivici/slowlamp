@@ -2,7 +2,7 @@ name: Deploy DIY Docs
 
 on:
   push:
-    branches: ["diy"] 
+    branches: ["DIY-slowlamp"] 
 
   workflow_dispatch:
 
