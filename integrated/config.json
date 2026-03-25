@@ -1,12 +1,12 @@
 {
     "using_pi": true,
-    "day_length" : 7,
+    "day_length" : 2,
     "animation_fps" : 0.25,
     "fast_stream_interval": 1.5,
-    "using_HD108" : true,
-    "diyVersion" : false,
-    "has_animation": true,
-    "display_cv2_window" : true,
+    "using_HD108" : false,
+    "diyVersion" : true,
+    "has_animation": false,
+    "display_cv2_window" : false,
     "led_color_data_folder": "/home/slowlamp4/Documents/slowlamp/HD108/",
     "camera_tuning_file": "/home/slowlamp4/Documents/slowlamp/image_proc/test.json"
 }

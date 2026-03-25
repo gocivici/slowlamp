@@ -639,7 +639,7 @@ def dominantColor(waitTime):
 
     record = [tuple(vibrant_color[:-1]), vr_count,
             tuple(supplemental_colors[0][:-1]), supplemental_counts[0], tuple(supplemental_colors[1][:-1]), supplemental_counts[1],
-            tuple(supplemental_colors[2][:-1]), supplemental_counts[2], tuple(supplemental_colors[3][:-1]), supplemental_counts[3], int(time.time()//3600)]
+            tuple(supplemental_colors[2][:-1]), supplemental_counts[2], tuple(supplemental_colors[3][:-1]), supplemental_counts[3], int(time.time() // (day_length * 60))]
     print(record)
     cover.save(*record, isFastTrack=isFastTrack)
 
@@ -721,7 +721,7 @@ def capture_thread_target():
         # saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
         if diyVersion:    
             currentData = cover.retrieve()
-            spiralImage = drawSpiral(currentData)
+            spiralImage = drawSpiral(currentData, interval_minutes=day_length)
             cv2.imwrite("spiral.png", spiralImage)
             cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", "spiral.png"]
             subprocess.run(cmd, check=True)
