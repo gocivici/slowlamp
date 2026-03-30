@@ -1,6 +1,9 @@
 import spidev
 import time
 
+
+num_leds = 436
+
 def send_hd108_colors(colors_16bit, global_brightness=15):
     spi = spidev.SpiDev()
     spi.open(0, 0)                                            # Open SPI bus 0, device 0
@@ -11,7 +14,7 @@ def send_hd108_colors(colors_16bit, global_brightness=15):
     
     for r16, g16, b16 in colors_16bit:
         # 5-bit brightness (0-31)
-        brightness_5bit = min(global_brightness, 31)          # Loops through each LED's RGB values (0-65535 range) Ensures brightness stays within valid 5-bit range (0-31)
+        # brightness_5bit = min(global_brightness, 31)          # Loops through each LED's RGB values (0-65535 range) Ensures brightness stays within valid 5-bit range (0-31)
         
         if global_brightness <= 0:
             brightness = 0 #gives werid colors
@@ -41,7 +44,7 @@ test_colors = [
 # send_hd108_colors(test_colors, global_brightness=31)
 # time.sleep(2)
 
-off_colors = [(100, 100, 100) for _ in range(len(test_colors))]
+off_colors = [(65535, 65535, 65535) for _ in range(num_leds)]
 send_hd108_colors(off_colors, global_brightness=1)
 send_hd108_colors(off_colors, global_brightness=1)
 time.sleep(2)

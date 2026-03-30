@@ -7,7 +7,7 @@
 // MOSI: D11: data
 //common ground  
 
-uint16_t num_leds = 55;
+uint16_t num_leds = 11;
 
 uint16_t getBrightness(uint8_t rb, uint8_t gb, uint8_t bb) {
   uint8_t r5 = rb >> 3;
@@ -54,11 +54,11 @@ void loop() {
     //   SPI.transfer16(0x00);  // BLUE (16-bit)
     // }
     if (i%2 == 1){
-      uint16_t brightness = getBrightness(15, 15, 15);
-      sendPixel(brightness, 0, 0, 0xFFFF ); //blue
+      uint16_t brightness = getBrightness(24, 24, 24);
+      sendPixel(brightness, 0xFFFF, 0xFFFF, 0xFFFF ); //blue
     }else{
-      uint16_t brightness = getBrightness(0, 0, 31);
-      sendPixel(brightness, 0xFFFF/2, 0xFFFF/2, 0xFFFF/2 ); // a bit paler blue??
+      uint16_t brightness = getBrightness(24, 24, 24);
+      sendPixel(brightness, 0xFFFF, 0xFFFF, 0xFFFF ); // a bit paler blue??
       // sendPixel(brightness, 0xFFFF/2, 0, 0xFFFF/2 );  
     } 
   }
