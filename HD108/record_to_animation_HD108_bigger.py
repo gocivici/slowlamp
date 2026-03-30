@@ -13,7 +13,7 @@ import colour
 import correct_color_HD108
 
 
-record = "/home/slowlamp2/Documents/slowlamp/HD108/20250723_two_days.txt"
+record = "/home/slowlamp4/Documents/slowlamp/HD108/20250723_two_days.txt"
 # csv_file = open("C:/work/slow_lamp/light_simulation/animation_HD108_freeform.csv", "w", newline='') 
 # csv_coordinates = open("C:/work/slow_lamp/light_simulation/coordinates_HD108_freeform.csv", "w", newline='') 
 # writer = csv.writer(csv_file)
@@ -341,6 +341,8 @@ tracks = []
 
 with open(record, 'r') as file:
     for i, line in enumerate(file):
+        if i> 6:
+            break 
         # mode: vaooo; main_color (rgb) #18779: (102, 128, 172); supplemental_colors: [ #51700 (21, 22, 20), #29686 (40, 41, 42), #15506 (71, 85, 115), #5918 (189, 213, 228),]; @ 2025-07-23 16:42:07 
         main_match = re.search(r"main_color \(rgb\) #(\d+): \((\d+), (\d+), (\d+)\)", line)
         if main_match:
@@ -494,8 +496,8 @@ with open(record, 'r') as file:
 
 key_frames = np.array(key_frames)
 
-key_frame_duration = 1 # seconds
-fps = 15
+key_frame_duration = 7 # seconds
+fps = 5
 
 # start_color_oklab = colour.convert(start_color_rgb, "sRGB", "Oklab")
 last_color = np.zeros((len(header)))
@@ -584,12 +586,13 @@ def send_hd108_colors_with_brightness(colors_16bit):
 print(animation_plan[0])
 print(animation_plan[-10])
 
-np.savez("animation_plan.npz", animation_plan=animation_plan)
+np.savez("animation_plan_23cm.npz", animation_plan=animation_plan)
 
 for f in animation_plan:
     frame = f[1:].reshape(-1, 4)/3
     send_hd108_colors_with_brightness(frame)
     time.sleep(1/fps)
+
 
 
 colors_16bit = [(1, 0, 0, 0)]*num_leds
