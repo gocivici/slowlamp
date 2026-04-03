@@ -252,6 +252,8 @@ def get_colors_from_difference(current_img, previous_img, num_colors, separate_v
     if len(imgNoB.flatten()) <= num_colors * 3: 
         largest_color = np.array([255, 255, 255, 0]).astype(np.uint8)
         vibrant_color = np.array([255, 255, 255, 0]).astype(np.uint8)
+        if not separate_vibrant:
+            return diff_preview, [largest_color]*(num_colors), [0]*(num_colors)
 
         return diff_preview, vibrant_color, 0, [largest_color]*(num_colors-1), [0]*(num_colors-1)
 
