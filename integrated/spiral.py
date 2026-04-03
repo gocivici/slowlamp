@@ -8,23 +8,26 @@ def to_cv2_color(color):
 
 def drawSpiral(spiral_data, img_size=240, min_radius=40, max_radius=120, interval_minutes=60):
 
-
     canvas = np.zeros((img_size, img_size, 3), dtype=np.uint8)
     circle_center = (img_size // 2, img_size // 2)
-    slices_per_day = (24 * 60) / interval_minutes
+    
+    # --- CHANGED: Convert interval to hours for our math ---
+    interval_hours = interval_minutes / 60.0 
+    slices_per_day = 24 / interval_hours
+    
     angle_per_slice = 360 / slices_per_day  # angular step between entries
     arc_sweep = 360 / 24  # fixed 15-degree arc width for visual clarity
-
 
     spiral_data.sort(key=lambda x: x['timestamp'])
 
     start_ts = spiral_data[0]['timestamp']
     end_ts = spiral_data[-1]['timestamp']
-    duration_slices = max(end_ts - start_ts, 1)
+    
+    # --- CHANGED: Calculate duration based on hour intervals ---
+    duration_slices = max((end_ts - start_ts) / interval_hours, 1)
 
     # Calculate growth factor 'b'
     max_cumulative_angle_rad = (duration_slices * angle_per_slice) * (np.pi / 180)
-
 
     if max_cumulative_angle_rad < 2 * np.pi:
         max_cumulative_angle_rad = 2 * np.pi
@@ -33,7 +36,6 @@ def drawSpiral(spiral_data, img_size=240, min_radius=40, max_radius=120, interva
     hub_inner = 10
 
     # half_thickness computed so that draw_min = hub_outer + 2*half_thickness fits in max_radius
-    # solving: half_thickness = (max_radius - hub_outer) * slices_per_day / (2*n + 2*slices_per_day)
     n = max(1, len(spiral_data))
     half_thickness = max(1, int((max_radius - hub_outer) * slices_per_day / (2 * n + 2 * slices_per_day)))
     draw_min = hub_outer + 2 * half_thickness
@@ -46,11 +48,14 @@ def drawSpiral(spiral_data, img_size=240, min_radius=40, max_radius=120, interva
         trace_vibrant = to_cv2_color(entry.get('vc', (255, 255, 255)))
 
         current_ts = entry['timestamp']
-        slices_elapsed = (current_ts - start_ts)
+        
+        # --- CHANGED: Calculate elapsed slices in hours ---
+        slices_elapsed = (current_ts - start_ts) / interval_hours
         cumulative_angle_rad = (slices_elapsed * angle_per_slice) * (np.pi / 180)
         radius = int(draw_min + b * cumulative_angle_rad)
 
-        slice_of_day = (current_ts % 86400) / (interval_minutes * 60)
+        # --- CHANGED: current_ts is in hours, so mod 24 gives the hour of the day ---
+        slice_of_day = (current_ts % 24) / interval_hours
         start_angle = (slice_of_day * angle_per_slice) - 90
         end_angle = start_angle + arc_sweep
 

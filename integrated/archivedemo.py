@@ -4,7 +4,7 @@ import random
 
 NUM_CAPTURES = 24*7
 base_timestamp = int(time.time())
-HOUR = 3600
+HOUR = 1
 
 # DEBUG: fixed colors
 # color_vibrant = [255, 0, 0]
@@ -34,7 +34,7 @@ for i in range(NUM_CAPTURES):
         ambientColor4, count_ac_4,
         current_timestamp
     )
-    readable = time.strftime("%Y-%m-%d %H:%M", time.localtime(current_timestamp))
+    readable = time.strftime("%Y-%m-%d %H:%M", time.localtime(current_timestamp*3600))
     print(f"Capture {i + 1}/{NUM_CAPTURES} saved ({readable})")
 
 print(len(cover.retrieve()))
