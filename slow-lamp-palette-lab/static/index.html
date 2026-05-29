@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Palette Lab</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+
+      <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+      <aside class="sidebar">
+        <h2>Color Models</h2>
+        <div class="model-list" id="modelList"></div>
+
+        <div class="sidebar-section">
+          <h2>Preprocessing</h2>
+
+          <div class="toggle-row">
+            <span>Show original image</span>
+            <button type="button" class="switch" id="previewToggle" aria-pressed="false">
+              <span class="switch-thumb"></span>
+            </button>
+          </div>
+
+          <hr class="sidebar-divider" />
+
+          <div class="slider-label-row">
+            <span>Blur σ</span>
+            <span class="slider-value" id="blurValueText">0.0</span>
+          </div>
+          <input type="range" min="0" max="20" step="0.1" value="0" id="blurSlider" class="sidebar-slider" />
+
+          <div class="toggle-row">
+            <span>Subtraction mode</span>
+            <button type="button" class="switch" id="subtractionToggle" aria-pressed="false">
+              <span class="switch-thumb"></span>
+            </button>
+          </div>
+          <div id="subtractionUploadRow" style="display:none;">
+            <label class="subtraction-upload-label">
+              <span id="subtractionFileName">Choose reference image…</span>
+              <input type="file" accept="image/*" id="subtractionInput" />
+            </label>
+            <img id="subtractionPreview" alt="Subtraction reference" />
+            <div class="slider-label-row" style="margin-top:10px;">
+              <span>Threshold</span>
+              <input type="number" min="0" max="100" step="1" value="10" id="thresholdInput" class="threshold-input" />
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ── Main content ────────────────────────────────────────────── -->
+      <main class="main">
+        <div class="top-bar">
+          <h1>Palette Lab</h1>
+          <label class="upload-button">
+            Upload Image
+            <input type="file" accept="image/*" id="imageInput" />
+          </label>
+        </div>
+
+        <div class="canvas-frame" id="canvasFrame">
+          <div class="canvas-placeholder" id="canvasPlaceholder">
+            Upload an image to begin
+          </div>
+          <div class="image-tooltip" id="imageTooltip"></div>
+        </div>
+
+        <div class="swatches" id="swatchRow">
+          <div class="swatch-block"><div class="swatch-color"></div><div class="swatch-hex">R G B</div></div>
+          <div class="swatch-block"><div class="swatch-color"></div><div class="swatch-hex">R G B</div></div>
+          <div class="swatch-block"><div class="swatch-color"></div><div class="swatch-hex">R G B</div></div>
+          <div class="swatch-block"><div class="swatch-color"></div><div class="swatch-hex">R G B</div></div>
+          <div class="swatch-block"><div class="swatch-color"></div><div class="swatch-hex">R G B</div></div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+      </main>
+
+    </div>
+
+    <!--
+      Script load order matters:
+        1. p5.js   — defines the p5 globals (setup, draw, loadImage, etc.)
+        2. canvas.js — defines setup() and draw(), which p5 calls automatically
+        3. app.js  — wires up state and events; references globals from canvas.js
+    -->
+    <script src="/static/canvas.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
