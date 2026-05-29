@@ -21,6 +21,7 @@ let blurDebounce     = null;
 let subtractionMode      = false;
 let subtractFile         = null;
 let subtractionThreshold = 13;
+let paletteSize          = 5;
 
 // ── DOM References ────────────────────────────────────────────────────────
 
@@ -39,6 +40,8 @@ const subtractionUploadRow = document.getElementById("subtractionUploadRow");
 const subtractionFileName  = document.getElementById("subtractionFileName");
 const subtractionPreview   = document.getElementById("subtractionPreview");
 const thresholdInput       = document.getElementById("thresholdInput");
+const kSlider              = document.getElementById("kSlider");
+const kValueText           = document.getElementById("kValueText");
 
 // ── Blur ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +56,12 @@ function updateSliderBackground() {
   blurSlider.style.setProperty("--fill", `${(blurValue / 20) * 100}%`);
 }
 
+function setKValue(value) {
+  paletteSize = parseInt(value, 10);
+  kValueText.textContent = paletteSize;
+  kSlider.style.setProperty("--fill", `${((paletteSize - 2) / 10) * 100}%`);
+}
+
 function scheduleExtract() {
   if (!imageFile) return;
   clearTimeout(blurDebounce);
@@ -62,6 +71,12 @@ function scheduleExtract() {
 blurSlider.addEventListener("input", (event) => {
   setBlurValue(parseFloat(event.target.value));
   scheduleExtract();
+});
+
+kSlider.addEventListener("input", (event) => {
+  setKValue(event.target.value);
+  updateSwatches([]);
+  if (imageFile) extractPalette();
 });
 
 // ── Preview toggle ────────────────────────────────────────────────────────
@@ -218,6 +233,7 @@ async function extractPalette() {
     form.append("file", imageFile);
     form.append("model", currentModel);
     form.append("blur", blurValue.toString());
+    form.append("k", paletteSize.toString());
     if (subtractionMode && subtractFile) {
       form.append("subtract_file", subtractFile);
       form.append("threshold", subtractionThreshold.toString());
@@ -250,24 +266,30 @@ async function extractPalette() {
 // ── Swatches ──────────────────────────────────────────────────────────────
 
 function updateSwatches(palette) {
-  Array.from(swatchRow.children).forEach((block, index) => {
-    const colorBox = block.querySelector(".swatch-color");
-    const label    = block.querySelector(".swatch-hex");
-    if (palette[index]) {
-      const [r, g, b] = palette[index];
+  const count = palette.length || paletteSize;
+  swatchRow.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const block    = document.createElement("div");
+    block.className = "swatch-block";
+    const colorBox = document.createElement("div");
+    colorBox.className = "swatch-color";
+    const label    = document.createElement("div");
+    label.className = "swatch-hex";
+    if (palette[i]) {
+      const [r, g, b] = palette[i];
       const rgbText = `${r} ${g} ${b}`;
-      const hex = rgbToHex(r, g, b);
-      colorBox.style.background = hex;
+      colorBox.style.background = rgbToHex(r, g, b);
       label.textContent = rgbText;
       block.style.cursor = "pointer";
       label.onclick = () => copyToClipboard(label, rgbText);
     } else {
       colorBox.style.background = "var(--placeholder)";
       label.textContent = "R G B";
-      block.style.cursor = "default";
-      label.onclick = null;
     }
-  });
+    block.appendChild(colorBox);
+    block.appendChild(label);
+    swatchRow.appendChild(block);
+  }
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────
@@ -288,6 +310,7 @@ async function copyToClipboard(label, text) {
 function setBusy(state) {
   swatchRow.classList.toggle("dimmed", state);
   blurSlider.classList.toggle("busy", state);
+  kSlider.classList.toggle("busy", state);
 }
 
 function showError(message) {
@@ -302,6 +325,8 @@ function clearError() {
 
 window.addEventListener("load", () => {
   setBlurValue(0.0);
+  setKValue(5);
+  updateSwatches([]);
   fetchModels();
   setInterval(fetchModels, 8000);
 });

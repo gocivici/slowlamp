@@ -37,6 +37,7 @@ Open **http://localhost:5001** in your browser.
 | `numpy` | Array operations on pixel data |
 | `opencv-python` | Color space conversion (RGB → LAB), Gaussian blur, pixel diff |
 | `pillow` | Image loading, resizing, PNG encoding for previews |
+| `scikit-image` | SLIC superpixel segmentation (used by `08_kmeans_lab_region_contrast`) |
 
 ---
 
@@ -48,19 +49,43 @@ slow-lamp-palette-lab/
 ├── model_registry.py     # Discovers and hot-reloads models from models/
 ├── preprocessing.py      # Blur, subtraction, preview generation
 ├── requirements.txt
-├── models/               # Add your own .py files here
-│   ├── kmeans_lab.py
-│   ├── kmeans_lab_chroma_filtered.py
-│   ├── kmeans_lab_chroma_weighted.py
-│   ├── kmeans_lab_filtered_medoids.py
-│   ├── kmeans_lab_medoids.py
-│   └── kmeans_lab_post_snap.py
+├── models/               # Add your own .py files here (prefix = sidebar order)
+│   ├── 01_kmeans_lab.py
+│   ├── 02_kmeans_lab_chroma_filtered.py
+│   ├── 03_kmeans_lab_chroma_weighted.py
+│   ├── 04_kmeans_lab_medoids.py
+│   ├── 05_kmeans_lab_filtered_medoids.py
+│   ├── 06_kmeans_lab_medoids_spread.py
+│   ├── 07_kmeans_lab_saliency_rarity.py
+│   └── 08_kmeans_lab_region_contrast.py
+├── sketches/
+│   └── saliency_lab/     # Standalone SLIC saliency visualiser — port 5002
+│       ├── app.py
+│       ├── requirements.txt
+│       └── static/index.html
 └── static/
     ├── index.html        # App shell (structure only)
     ├── style.css         # All styles
     ├── canvas.js         # p5.js rendering layer
     └── app.js            # State, events, API calls
 ```
+
+---
+
+## Models
+
+Model files are numbered so the sidebar lists them in creation order.
+
+| Model | Color output | Pixel filtering | Notes |
+|---|---|---|---|
+| `01_kmeans_lab` | Cluster centers | None | Baseline — k-means in LAB with random init |
+| `02_kmeans_lab_chroma_filtered` | Cluster centers | Drops low-chroma pixels (chroma < 20) | Skips near-gray pixels before clustering; falls back to all pixels for monochrome scenes |
+| `03_kmeans_lab_chroma_weighted` | Cluster centers | Weighted sampling by chroma² | Vivid colors overrepresented in the sample; does not hard-exclude grays |
+| `04_kmeans_lab_medoids` | Real pixels | None | Like baseline but returns the actual pixel closest to each center (medoid) |
+| `05_kmeans_lab_filtered_medoids` | Real pixels | Drops low-chroma pixels (chroma < 20) | Chroma filter + medoid output combined |
+| `06_kmeans_lab_medoids_spread` | Real pixels | None | Oversamples at 3× k, greedily selects k medoids maximally spread in LAB space; anchors on the largest cluster first |
+| `07_kmeans_lab_saliency_rarity` | Real pixels | None | Weights pixels inversely by color-bin frequency in LAB space — rare colors are oversampled before clustering |
+| `08_kmeans_lab_region_contrast` | Real pixels | None | SLIC superpixels + Cheng et al. region-contrast saliency weighting; falls back to uniform sampling for flat pixel arrays (subtraction mode) |
 
 ---
 
@@ -126,6 +151,9 @@ image_np = preprocessing.your_new_step(image_np, ...)   # ← add here
 
 ## Preprocessing Controls
 
+### Colors k
+Number of colors to extract. Adjustable from 2 to 12 in the sidebar (the API accepts up to 20). The swatch row expands horizontally to fit any count.
+
 ### Blur σ
 Gaussian blur applied before palette extraction. Suppresses fine texture and noise so the model clusters broad color regions rather than individual pixels. Range 0–20.
 
@@ -160,6 +188,7 @@ Runs palette extraction and returns colors + optional preview.
 | `file` | image file | yes | Main image |
 | `model` | string | yes | Model name from `/api/models` |
 | `blur` | float | no | Gaussian sigma, default `0.0` |
+| `k` | int | no | Number of palette colors, 2–20, default `5` |
 | `subtract_file` | image file | no | Reference image for subtraction mode |
 | `threshold` | int | no | Subtraction threshold 0–100, default `10` |
 
@@ -174,3 +203,38 @@ Runs palette extraction and returns colors + optional preview.
 ```
 
 `preview` is `null` when no preprocessing is active. In subtraction mode the preview PNG is RGBA — transparent where pixels are identical, opaque where they differ.
+
+---
+
+## Sketches
+
+Standalone tools for deeper inspection, each self-contained and independent of the main app.
+
+### `sketches/saliency_lab/`
+
+Interactive visualiser for the region-contrast saliency pipeline. Runs on **port 5002**.
+
+```bash
+cd slow-lamp-palette-lab
+python3 sketches/saliency_lab/app.py
+```
+
+**Controls:** n_segments (50–600), spatial σ (0.1–1.0), k (2–10), min spread (0–30). All sliders debounce 200 ms and re-run the full pipeline on change.
+
+**Image views:** Original · Heatmap · Segments · Palette input · Masked heatmap (subtraction mode only)
+
+**Subtraction mode:** Toggle on, upload a reference image, set a threshold (0–100). The saliency heatmap is gated by the foreground mask after it is computed on the full frame — SLIC and region contrast still see the full image. Only the gated pixels feed the clustering.
+
+**`POST /api/process`**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `file` | image file | yes | Main image |
+| `n_segments` | int | no | SLIC target segment count, default `300` |
+| `spatial_sigma` | float | no | Gaussian bandwidth on normalised centroid distance, default `0.4` |
+| `k` | int | no | Palette size, default `5` |
+| `min_spread_dist` | float | no | Minimum LAB distance gate for spread selection, default `12` |
+| `subtract_file` | image file | no | Reference image for subtraction masking |
+| `threshold` | int | no | Subtraction threshold 0–100, default `13` |
+
+Response keys: `original`, `heatmap`, `segments`, `palette_input`, `masked_heatmap` (null when subtraction off), `palette`.

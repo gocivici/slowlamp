@@ -50,7 +50,7 @@ body {
 
 .sidebar h2 {
   margin: 0 0 24px;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-secondary);
@@ -151,7 +151,7 @@ body {
 }
 
 .model-option span {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.3;
   font-family: var(--font-mono);
   color: var(--text-secondary);
@@ -313,7 +313,7 @@ body {
   border: 1px dashed var(--border);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   overflow: hidden;
 }
@@ -428,14 +428,15 @@ body {
   display: grid;
   place-items: center;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 13px;
 }
 
 /* ── Swatches ────────────────────────────────────────────────────────────── */
 
 .swatches {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 0;
   border-radius: 14px;
   overflow: hidden;
@@ -458,7 +459,7 @@ body {
   text-align: center;
   font-family: var(--font-mono);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   user-select: none;
 }
@@ -472,7 +473,7 @@ body {
 .error-message {
   margin-top: 12px;
   color: #E07B6F;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .dimmed {

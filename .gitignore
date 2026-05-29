@@ -1,8 +1,11 @@
 __pycache__/
+.venv/
 *.npz
 !pairings-32-GRBW.npz
 storage.txt
 *_storage.txt
 composition_*
 *.txt
+*.log
 *.png
+.DS_Store

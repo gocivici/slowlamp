@@ -53,6 +53,11 @@ def api_extract():
     except ValueError:
         blur_sigma = 0.0
 
+    try:
+        k = max(2, min(20, int(request.form.get("k", 5))))
+    except ValueError:
+        k = 5
+
     # ── Preprocessing pipeline ────────────────────────────────────────────────
     image = preprocessing.resize_to_limit(image)
     image_np = np.array(image, dtype=np.uint8)
@@ -83,7 +88,7 @@ def api_extract():
 
     # ── Palette extraction ────────────────────────────────────────────────────
     try:
-        palette = extract_fn(pixels_for_model, k=5)
+        palette = extract_fn(pixels_for_model, k=k)
     except Exception as exc:
         return jsonify({"error": f"Model error: {exc}"}), 500
 
