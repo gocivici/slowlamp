@@ -78,8 +78,7 @@ def save(VibrantColor, pixelCountVC, color2, pixelCountColor2,
     BLOCK_H = 3
     BLOCKS_PER_ROW = 24  # new row after 24 blocks
 
-    # status_pixel = (255, 255, 0, 255) if isFastTrack else (75, 0, 130, 255)
-    status_pixel = (255, 255, 0, 255) if isFastTrack else (194, 2, 113, 255)
+    status_pixel = (255, 255, 0, 255) if isFastTrack else (75, 0, 130, 255)
     # create the New Data Block   
     new_block = [
         # Row 1
@@ -102,7 +101,7 @@ def save(VibrantColor, pixelCountVC, color2, pixelCountColor2,
     ]
 
     # get existing records
-    all_blocks = get_existing_blocks("archive.png", BLOCK_W, BLOCK_H)
+    all_blocks = get_existing_blocks("archive-sim.png", BLOCK_W, BLOCK_H)
     
     # add new record
     all_blocks.append(new_block)
@@ -131,11 +130,11 @@ def save(VibrantColor, pixelCountVC, color2, pixelCountColor2,
         
         new_img.paste(temp_block, (x, y))
         
-    new_img.save("archive.png")
+    new_img.save("archive-sim.png")
     #print(f"Saved successfully. Total Blocks: {total_blocks}. Grid Size: {grid_cols}x{grid_rows} blocks ({img_w}x{img_h} pixels).")
 
 #main retrieve function
-def retrieve(filename="archive.png"):
+def retrieve(filename="archive-sim.png"):
 
     start_time = time.perf_counter()
     
