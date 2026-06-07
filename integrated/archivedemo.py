@@ -2,7 +2,7 @@ import cover
 import time
 import random
 
-NUM_CAPTURES = 24*7
+NUM_CAPTURES = 24*365*10
 base_timestamp = int(time.time())
 HOUR = 1
 

@@ -1,6 +1,6 @@
 import cover
 import cv2
-from spiral import drawSpiral
+from slowlampthree import drawSpiral
 
 currentData = cover.retrieve()
 spiralImage = drawSpiral(currentData)
