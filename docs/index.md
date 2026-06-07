@@ -4,7 +4,7 @@ layout: home
 nav_order: 1
 ---
 
-Welcome to the DIY slow lamp wiki! 
+### Welcome to the DIY slow lamp wiki! 
 
 The DIY slow lamp is a device that captures and displays the chromatic biography of your environment through an onboard camera that captures ambient, non-indexical color data. This ongoing record is visualized on the screen in the form of a spiral that grows larger with every new recording, representing the most ambient and vibrant colors of each hour. 
 
