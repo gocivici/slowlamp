@@ -22,10 +22,10 @@ This project is an open-source, DIY branch of a long-term Research through Desig
 This wiki serves as the central project repository for the DIY slow lamp. It contains everything you need to build your own version from scratch, modify its functions, and maintain or repair the device over its lifetime.
 
 ### Table of Contents
-*   **[BOM](BOM/BOM.md):** A complete Bill of Materials detailing all the off-the-shelf components required for the build.
-*   **[Hardware](Hardware/Hardware.md):** Wiring diagrams and documentation for the electronics.
-*   **[Firmware](Firmware/Firmware.md):** Source code, technical documentation and instructions for setting up your development environment.
-*   **[Form](Form/Form.md):** 3D printing files and fabrication instructions for creating an enclosure.
+*   **[BOM](BOM/BOM.html):** A complete Bill of Materials detailing all the off-the-shelf components required for the build.
+*   **[Hardware](Hardware/Hardware.html):** Wiring diagrams and documentation for the electronics.
+*   **[Firmware](Firmware/Firmware.html):** Source code, technical documentation and instructions for setting up your development environment.
+*   **[Form](Form/Form.html):** 3D printing files and fabrication instructions for creating an enclosure.
 
 ---
 
