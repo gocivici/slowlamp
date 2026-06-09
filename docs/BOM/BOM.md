@@ -4,7 +4,7 @@ layout: default
 nav_order: 2
 ---
 
-# Hardware Bill of Materials (BOM)
+# Bill of Materials (BOM)
 
 The following components are required for a minimal DIY slow lamp build. Please note the specific cable and magnet requirements in the accessories section below.
 
@@ -25,7 +25,3 @@ The following components are required for a minimal DIY slow lamp build. Please 
 ## Alternative Display Options
 
 Here are a few tested alternatives that support the Raspberry Pi Zero 2 W.
-
-* **Pimoroni HyperPixel 2.1 Round (2.1" | 480x480px):**
-* **Waveshare 4-inch HDMI Round Touch Display (4.0" | 720x720px):**
-* **Waveshare 1.69" or 1.9" IPS LCDs (Rounded Rectangles):**
