@@ -425,7 +425,7 @@ def dominantColor(waitTime):
             
     print("Waiting seconds or a 'c' key press:", waitTime)
     if waitTime > 0:
-        smart_delay(waitTime)
+        user_triggered = smart_delay(waitTime)
 
     # Get the current time in seconds since the epoch
     start_time_seconds = time.time()
@@ -441,10 +441,12 @@ def dominantColor(waitTime):
 
     print("taking second picture")
     
-    current_img_bgr = cv2.cvtColor(current_img, cv2.COLOR_RGB2BGR )
-    # cv2.imwrite('curim.png', current_img_bgr)
-    filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    cv2.imwrite(f'curim_{filename_time}.png', current_img_bgr)
+    if user_triggered:
+        current_img_bgr = cv2.cvtColor(current_img, cv2.COLOR_RGB2BGR )
+        # cv2.imwrite('curim.png', current_img_bgr)
+        filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        cv2.imwrite(f'curim_{filename_time}.png', current_img_bgr)
+        print("saved current image", f'curim_{filename_time}.png')
     # cv2.imwrite('previm.png', previous_img)
     
 
@@ -453,9 +455,11 @@ def dominantColor(waitTime):
     diff_preview, vibrant_color, vr_count, supplemental_colors, supplemental_counts = get_colors_from_difference(current_img, previous_img, needed_clusters)
 
     if supplemental_counts[0] == 0: #empty clustering 
+        
         trace = helper_classes.Trace(vibrant_color, vr_count, traces_storing_mode="vaooo", supplemental_colors= supplemental_colors, supplemental_counts = supplemental_counts)
         stored_traces.append(trace)
-        storage_file.writelines([trace.print_trace()])
+        if not user_triggered:
+            storage_file.writelines([trace.print_trace()])
         if has_animation:
             trace_queue.put(trace)
         time_elapsed = time.time() - start_time_seconds  
@@ -467,8 +471,9 @@ def dominantColor(waitTime):
                     supplemental_counts = supplemental_counts )
     
     stored_traces.append(trace)
-    storage_file.writelines([trace.print_trace()])
-    storage_file.flush()
+    if not user_triggered:
+        storage_file.writelines([trace.print_trace()])
+        storage_file.flush()
     if has_animation:
         trace_queue.put(trace)
     if len(stored_traces) > 23:
@@ -477,11 +482,12 @@ def dominantColor(waitTime):
     if display_cv2_window:
         canvas = display_diagnostic_at_main(canvas, prev_preview, curr_preview, diff_preview, vibrant_color, vr_count, supplemental_colors, supplemental_counts)
 
-    record = [tuple(vibrant_color), vr_count,
+    if not user_triggered:
+        record = [tuple(vibrant_color), vr_count,
             tuple(supplemental_colors[0]), supplemental_counts[0], tuple(supplemental_colors[1]), supplemental_counts[1],
             tuple(supplemental_colors[2]), supplemental_counts[2], tuple(supplemental_colors[3]), supplemental_counts[3], int(time.time()//3600)]
-    print("record: ", record)
-    cover.save(*record, isFastTrack=False)
+        print("record: ", record)
+        cover.save(*record, isFastTrack=False)
 
     previous_img = current_img
 
