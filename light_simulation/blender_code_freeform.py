@@ -22,7 +22,7 @@ bpy.context.scene.camera = camera
 
 # 1. Create lights
 lights = []
-with open("C:/work/slow_lamp/light_simulation/coordinates_freeform.csv", newline='') as csvfile:
+with open("C:/work/slow_lamp/light_simulation/coordinates_freeform_2026-10-08_5pm_pres.csv", newline='') as csvfile:
     reader = csv.reader(csvfile)
     header = next(reader)  # skip header
 
@@ -47,8 +47,8 @@ def animate_from_csv(filepath):
         reader = csv.reader(csvfile)
         header = next(reader)  # skip header
 
-        for row in reader:
-            frame = int(float(row[0]))*15
+        for idx, row in enumerate(reader):
+            frame = idx*15
             for i in range(1, len(row), 4):
                 index = (i - 1) // 4
                 if index >= len(lights):
@@ -61,12 +61,12 @@ def animate_from_csv(filepath):
                 light.data.color = (r, g, b)
                 # print(index, watt, r)
                 light.data.keyframe_insert(data_path="color", frame=frame)
-                light.data.energy = watt
+                light.data.energy = watt*0.4
                 light.data.keyframe_insert(data_path="energy", frame=frame)
         return frame
 
 # 🔁 Call the animation function with your CSV path
-csv_path = "C:/work/slow_lamp/light_simulation/animation_plan_freeform.csv"  # ← change this
+csv_path = "C:/work/slow_lamp/light_simulation/animation_plan_2026-10-08_5pm_pres.csv"  # ← change this
 end_frame = animate_from_csv(csv_path)
 
 # Add a plane (so we can see the light effect)
@@ -114,8 +114,9 @@ scene.render.fps = 15
 #scene.eevee.use_bloom = True  # Nice glow effect
 
 # Set render settings
-scene.render.image_settings.file_format = 'FFMPEG'
-scene.render.filepath = "//color_change_lamp_freeform.mp4"
+scene.render.image_settings.file_format = 'FFMPEG' #4.3
+# scene.render.image_settings.media_type = 'VIDEO' #5.0
+scene.render.filepath = "//freeform_2026-10-08_5pm_pres.mp4"
 scene.render.ffmpeg.format = 'MPEG4'
 scene.render.ffmpeg.codec = 'H264'
 scene.render.ffmpeg.constant_rate_factor = 'MEDIUM'
