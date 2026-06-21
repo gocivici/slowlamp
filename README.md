@@ -3,9 +3,9 @@ Hi, this is the slow lamp project.
 
 ### notes
 - source venvname/bin/activate
-- pip install -U scikit-learn
+- pip install scikit-learn
 - pip install colormath
-- colour-science
+- colour-science (NOT colour)
 - adafruit-circuitpython-as7341
 
 
@@ -39,3 +39,9 @@ diff[abs(diff)<13]=0
 Adjustable value for image substraction, the lower the number the more the sensitivity
 
 
+## windows 
+```
+py -m venv .slowlamp
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.slowlamp\Scripts\activate.ps1
+```

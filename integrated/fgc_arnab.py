@@ -6,7 +6,10 @@ import math
 import os
 import subprocess
 from PIL import Image
-from datetime import datetime
+
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 from scipy.spatial.distance import cdist
@@ -16,6 +19,8 @@ from spiral import drawSpiral
 
 import helper_classes
 import kmeans_lab_medoids_spread
+from moon_helper import MoonHelper
+
 import threading
 import queue
 import random
@@ -36,7 +41,7 @@ configData = loadConfig('integrated/config.json')
 
 using_pi = configData.get("using_pi")
 day_length = configData.get("day_length") # minutes
-animation_fps = configData.get("animation_fps") #inverse seconds
+default_animation_fps = configData.get("animation_fps") #inverse seconds
 using_HD108 = configData.get("using_HD108")
 has_animation = configData.get("has_animation")
 diyVersion = configData.get("diyVersion")
@@ -51,8 +56,10 @@ storage_file = open(f"{filename_time}_fgc_arnab.txt", "w")
 
 stored_traces = []
 trace_queue = queue.Queue()
+animation_queue = queue.Queue()
 
-
+    
+moon_interaction_flag = threading.Event()
 
 if using_pi:
     # import board
@@ -86,6 +93,21 @@ if using_pi:
 
     # camera.start(show_preview=False)
 
+    from gpiozero import Button
+
+    # --- Button Callbacks ---
+    def trigger_interaction():
+        print("Switch ON: Activating moon interaction. ")
+        moon_interaction_flag.set()    # Changes flag to True
+
+    def trigger_standard():
+        print("Switch OFF: Returning to standard animation.")
+        moon_interaction_flag.clear()  # Changes flag to False
+
+    # Initialize the button (assuming GPIO 17 like before)
+    button = Button(17)
+    button.when_pressed = trigger_interaction
+    button.when_released = trigger_standard
 
 if using_HD108:
     import spidev
@@ -122,6 +144,7 @@ if using_HD108:
 
 if has_animation:
     correct_color_HD108.init(configData.get("led_color_data_folder"))
+    moon_helper = MoonHelper("hourly_moon_table_25-26.csv")
 
 cap = None
 if not using_pi:
@@ -143,6 +166,7 @@ header = ["frame"]
 for i in range(num_leds):
     header.extend([f"light_{i}_Wt", f"light_{i}_R", f"light_{i}_G", f"light_{i}_B" ])
 
+white_frame = [2, 2**16-1, 2**16-1, 2**16-1]*num_leds
 
 canvas = None
 canvas_size = 500
@@ -345,12 +369,6 @@ def smart_delay(waitTime_seconds):
 
 def display_diagnostic_at_main(canvas, prev_preview, curr_preview, diff_preview, vibrant_color, vr_count, supplemental_colors, supplemental_counts):
         global stored_traces
-    # display some stuff
-        # canvas = np.ones((500, 800, 3)).astype(np.uint8)
-        # if canvas_color is not None:
-        #     canvas[:, :, 0] = canvas_color[2]
-        #     canvas[:, :, 1] = canvas_color[1]
-        #     canvas[:, :, 2] = canvas_color[0]
         
         canvas[0:prev_preview.shape[0], 0:prev_preview.shape[1], ::-1] = prev_preview
         canvas[0:curr_preview.shape[0], prev_preview.shape[1]:prev_preview.shape[1]+curr_preview.shape[1], ::-1] = curr_preview
@@ -419,9 +437,6 @@ def dominantColor(waitTime):
         previous_img = capture_image()
         print("taking first picture")
 
-
-    fast_vr_color = [0, 0, 0, 255]
-    fast_count = 0
             
     print("Waiting seconds or a 'c' key press:", waitTime)
     if waitTime > 0:
@@ -462,6 +477,8 @@ def dominantColor(waitTime):
             storage_file.writelines([trace.print_trace()])
         if has_animation:
             trace_queue.put(trace)
+            if not moon_interaction_flag.is_set():
+                animation_queue.put(trace)
         time_elapsed = time.time() - start_time_seconds  
         return (supplemental_colors[0], 0), (vibrant_color, 0),  time_elapsed
     
@@ -476,6 +493,8 @@ def dominantColor(waitTime):
         storage_file.flush()
     if has_animation:
         trace_queue.put(trace)
+        if not moon_interaction_flag.is_set():
+            animation_queue.put(trace)
     if len(stored_traces) > 23:
         stored_traces = stored_traces[-23:]
 
@@ -488,6 +507,9 @@ def dominantColor(waitTime):
             tuple(supplemental_colors[2]), supplemental_counts[2], tuple(supplemental_colors[3]), supplemental_counts[3], int(time.time()//3600)]
         print("record: ", record)
         cover.save(*record, isFastTrack=False)
+        # existing_record_colors.append([record[0], record[2], record[4], record[6], record[8]])
+        # existing_record_counts.append([record[1], record[3], record[5], record[7], record[9]])
+        # existing_hours.append(record[10])
 
     previous_img = current_img
 
@@ -560,11 +582,6 @@ def capture_thread_target():
         largest_color, vibrant_color, time_elapsed = dominantColor(day_length*60-time_elapsed) #time in seconds
         print("color profile: largest_color, vibrant_color")
         print(largest_color, vibrant_color)
-        # saveColor(largest_color[0], filename = "archive_largest.png")
-        # saveColor(expressible_color, filename = "archive_expressible.png")
-        # saveColor(vibrant_color[0], filename = "archive_vibrant.png")
-        # saveColor(cluster_color, filename = "archive_cluster.png")
-        # saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
         if diyVersion:    
             currentData = cover.retrieve()
             spiralImage = drawSpiral(currentData)
@@ -575,6 +592,29 @@ def capture_thread_target():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return
         
+def init_tracks(trace, tracks):
+    # Calculate center of all LEDs for vibrant cluster
+    center_x = np.mean(led_points[:, 0])
+    center_y = np.mean(led_points[:, 1])
+
+    # Generate random centroids around the vibrant center for other clusters
+    # Use a reasonable radius based on the spread of LEDs
+    spread = max(np.std(led_points[:, 0]), np.std(led_points[:, 1]))
+    radius = spread * 0.8  # Adjust this factor as needed
+    
+    other_centers = []
+    for i in range(4):
+        angle = (2 * np.pi * i / 4) + random.uniform(-np.pi/8, np.pi/8)  # Add some randomness
+        offset_x = radius * np.cos(angle)
+        offset_y = radius * np.sin(angle)
+        center = np.array([center_x + offset_x, center_y + offset_y])
+        other_centers.append(center)
+
+    for j, (color, count) in enumerate(zip(trace.supplemental_colors, trace.supplemental_counts)):
+        track = helper_classes.ColorTrack(color, count, base_watt, position_group=j)
+        track.centroid = other_centers[j]
+        tracks.append(track) 
+
 def generate_frame_from_trace_tracks(trace, tracks):
 
     n, m = len(tracks), len(trace.supplemental_colors)
@@ -711,43 +751,91 @@ def interpolate_two_frames(key_frame1, key_frame2, animation_length):
     return animation_plan
     
 def animation_thread_target():
-    global trace_queue
-    tracks = []
+    global trace_queue, animation_queue, df_hourly_moon
+    tracks = [] #num = 5
     start_keyframe = None
     target_keyframe = None
     progress = 0
     animation_length = 0
     animation_plan = None
+    animation_fps = default_animation_fps
+    last_interaction_flag = False
+    last_interaction_time = 0
+    num_records_matched = 0
+    min_animation_length = 4
 
     while True:
-        if len(tracks) == 0 and not trace_queue.empty():
-            trace = trace_queue.get()
-            # Calculate center of all LEDs for vibrant cluster
-            center_x = np.mean(led_points[:, 0])
-            center_y = np.mean(led_points[:, 1])
+        if moon_interaction_flag.is_set():
+            current_time = datetime.fromtimestamp(time.time(), tz=ZoneInfo("America/Vancouver"))
+            if not last_interaction_flag or time.time()//3600 != last_interaction_time:
+                # if new interaction
+                if using_HD108:
+                    #could match the illuminance here... 
+                    send_hd108_colors_with_brightness(white_frame)
+                #load the up-to-date cover image
+                cover_img = "archive.png"
+                # cover_start_time = datetime.strptime("2025-11-11 00:53:34", "%Y-%m-%d %H:%M:%S") 
+                data = cover.retrieve(filename=cover_img)
+                
+                cover_start_time = datetime.fromtimestamp(data[0]["timestamp"]*3600, tz=ZoneInfo("America/Vancouver"))
+                print("archive cover image start time: ", cover_start_time)
 
-            # Generate random centroids around the vibrant center for other clusters
-            # Use a reasonable radius based on the spread of LEDs
-            spread = max(np.std(led_points[:, 0]), np.std(led_points[:, 1]))
-            radius = spread * 0.8  # Adjust this factor as needed
-            
-            other_centers = []
-            for i in range(4):
-                angle = (2 * np.pi * i / 4) + random.uniform(-np.pi/8, np.pi/8)  # Add some randomness
-                offset_x = radius * np.cos(angle)
-                offset_y = radius * np.sin(angle)
-                center = np.array([center_x + offset_x, center_y + offset_y])
-                other_centers.append(center)
+                existing_record_colors = []
+                existing_record_counts = []
+                existing_hours = []
+                for record in data:
+                    # Extract main color using regex
+                    existing_record_colors.append([record["vc"], record["ac1"], record["ac2"], record["ac3"], record["ac4"]])
+                    existing_record_counts.append([record["vc_px"], record["ac1_px"], record["ac2_px"], record["ac3_px"], record["ac4_px"]])
+                    # vibrant_colors.append(record["vc"])
+                    existing_hours.append(record["timestamp"])
 
-            for j, (color, count) in enumerate(zip(trace.supplemental_colors, trace.supplemental_counts)):
-                track = helper_classes.ColorTrack(color, count, base_watt, position_group=j)
-                track.centroid = other_centers[j]
-                tracks.append(track) 
-            
+                if len(existing_hours)>0:
+                    ## Match the current illumation and change 
+                    existing_data_indices = moon_helper.find_matched_indices(current_time, existing_hours)
+
+                    if len(existing_data_indices) > 0:
+                        # animate through the historical data
+                        with animation_queue.mutex:
+                            animation_queue.queue.clear()
+                        for matched_i in existing_data_indices:
+                            trace = helper_classes.Trace(existing_record_colors[matched_i][0], existing_record_counts[matched_i][0], 
+                                                        traces_storing_mode="vaooo", 
+                                                        supplemental_colors= existing_record_colors[matched_i][1:], 
+                                                        supplemental_counts = existing_record_counts[matched_i][1:]) 
+                            animation_queue.put(trace)  
+                        
+                        tracks = []              
+                        num_records_matched = animation_queue.qsize()
+                    else:
+                        #no data to display - return to live mode
+                        pass
+            last_interaction_flag = True
+            last_interaction_time = time.time()//3600
+        else:
+            if last_interaction_flag:
+                with animation_queue.mutex:
+                    animation_queue.queue.clear()
+                item = None
+                while not trace_queue.empty():
+                    try:
+                        item = trace_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                if item is not None:
+                    animation_queue.put(item)
+            last_interaction_flag = False
+            animation_fps = default_animation_fps
+            num_records_matched = 0
+                    
+        if len(tracks) == 0 and not animation_queue.empty():
+            trace = animation_queue.get()
+            init_tracks(trace, tracks)
+
             start_keyframe = generate_frame_from_trace_tracks(trace, tracks)
             print("start keyframe generated")
         else:
-            if trace_queue.empty(): 
+            if animation_queue.empty(): 
                 if animation_plan is None:
                     time.sleep(1/animation_fps*10) #actually waiting for capturing 
                 else:
@@ -760,7 +848,7 @@ def animation_thread_target():
                         print("----------", progress)
                         progress += 1
                     time.sleep(1/animation_fps)
-            else: # has new capture
+            else: # has new animation
                 if target_keyframe is not None:
                     # bridge the old one 
                     remaining_animation = animation_plan[progress:]
@@ -774,9 +862,20 @@ def animation_thread_target():
                 
                     start_keyframe = target_keyframe
 
-                trace = trace_queue.get()
+                if not trace_queue.empty():
+                    trace_queue.get() 
+                    # make sure to clear get the trace queue as well, 
+                    # but we hope it's the same as the animation queue 
+                trace = animation_queue.get()
                 target_keyframe = generate_frame_from_trace_tracks(trace, tracks)
-                animation_length = int((target_keyframe[0] - start_keyframe[0])*animation_fps*0.8) # 0.8 = a pause for computation time
+                if num_records_matched > 0: #in the interaction mode
+                    animation_length = int(day_length/num_records_matched*animation_fps*0.9) # 0.8 = a pause for computation time
+                    if animation_length < min_animation_length:
+                        animation_length = min_animation_length
+                        animation_fps = (animation_length*num_records_matched)/(day_length*60*0.9)
+                else:
+                    animation_fps = default_animation_fps
+                    animation_length = int((target_keyframe[0] - start_keyframe[0])*animation_fps*0.8) # 0.8 = a pause for computation time
                 print("animation length", animation_length)
                 progress = 0
                 animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)        
@@ -788,14 +887,7 @@ if has_animation:
     # capture_thread.start()
     animation_thread.start()
 
-# capture_thread.join()
-# animation_thread.join()
-
 capture_thread_target()
-
-
-
-# animation_thread.join()
 
 print("Main: All threads finished.")
 
