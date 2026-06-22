@@ -56,7 +56,7 @@ storage_file = open(f"{filename_time}_fgc_arnab.txt", "w")
 
 stored_traces = []
 trace_queue = queue.Queue()
-animation_queue = queue.Queue()
+# animation_queue = queue.Queue()
 
     
 moon_interaction_flag = threading.Event()
@@ -97,7 +97,7 @@ if using_pi:
 
     # --- Button Callbacks ---
     def trigger_interaction():
-        print("Switch ON: Activating moon interaction. ")
+        print("Switch ON: 🌙 Activating moon interaction. ")
         moon_interaction_flag.set()    # Changes flag to True
 
     def trigger_standard():
@@ -477,8 +477,6 @@ def dominantColor(waitTime):
             storage_file.writelines([trace.print_trace()])
         if has_animation:
             trace_queue.put(trace)
-            if not moon_interaction_flag.is_set():
-                animation_queue.put(trace)
         time_elapsed = time.time() - start_time_seconds  
         return (supplemental_colors[0], 0), (vibrant_color, 0),  time_elapsed
     
@@ -493,8 +491,6 @@ def dominantColor(waitTime):
         storage_file.flush()
     if has_animation:
         trace_queue.put(trace)
-        if not moon_interaction_flag.is_set():
-            animation_queue.put(trace)
     if len(stored_traces) > 23:
         stored_traces = stored_traces[-23:]
 
@@ -580,8 +576,8 @@ def capture_thread_target():
 
     while True:
         largest_color, vibrant_color, time_elapsed = dominantColor(day_length*60-time_elapsed) #time in seconds
-        print("color profile: largest_color, vibrant_color")
-        print(largest_color, vibrant_color)
+        # print("color profile: largest_color, vibrant_color")
+        # print(largest_color, vibrant_color)
         if diyVersion:    
             currentData = cover.retrieve()
             spiralImage = drawSpiral(currentData)
@@ -751,7 +747,7 @@ def interpolate_two_frames(key_frame1, key_frame2, animation_length):
     return animation_plan
     
 def animation_thread_target():
-    global trace_queue, animation_queue, df_hourly_moon
+    global trace_queue, df_hourly_moon
     tracks = [] #num = 5
     start_keyframe = None
     target_keyframe = None
@@ -761,24 +757,24 @@ def animation_thread_target():
     animation_fps = default_animation_fps
     last_interaction_flag = False
     last_interaction_time = 0
-    num_records_matched = 0
+    # num_records_matched = 0
     min_animation_length = 4
+    is_running_live = True
+    moon_queue = queue.Queue()
 
     while True:
         if moon_interaction_flag.is_set():
             current_time = datetime.fromtimestamp(time.time(), tz=ZoneInfo("America/Vancouver"))
             if not last_interaction_flag or time.time()//3600 != last_interaction_time:
+                last_interaction_time = time.time()//3600
                 # if new interaction
-                if using_HD108:
-                    #could match the illuminance here... 
-                    send_hd108_colors_with_brightness(white_frame)
                 #load the up-to-date cover image
                 cover_img = "archive.png"
                 # cover_start_time = datetime.strptime("2025-11-11 00:53:34", "%Y-%m-%d %H:%M:%S") 
                 data = cover.retrieve(filename=cover_img)
                 
                 cover_start_time = datetime.fromtimestamp(data[0]["timestamp"]*3600, tz=ZoneInfo("America/Vancouver"))
-                print("archive cover image start time: ", cover_start_time)
+                print("🌙 archive cover image start time: ", cover_start_time)
 
                 existing_record_colors = []
                 existing_record_counts = []
@@ -792,30 +788,55 @@ def animation_thread_target():
 
                 if len(existing_hours)>0:
                     ## Match the current illumation and change 
-                    existing_data_indices = moon_helper.find_matched_indices(current_time, existing_hours)
-
+                    curr_illum, existing_data_indices = moon_helper.find_matched_indices(current_time, existing_hours)
+                    if using_HD108:
+                        #could match the illuminance here... 
+                        send_hd108_colors_with_brightness(white_frame)
                     if len(existing_data_indices) > 0:
+                        # New valid moon interaction; see scenario A in diagram
+                        print("🌙 new valid moon interaction")
                         # animate through the historical data
-                        with animation_queue.mutex:
-                            animation_queue.queue.clear()
+                        with moon_queue.mutex:
+                            moon_queue.queue.clear()
                         for matched_i in existing_data_indices:
                             trace = helper_classes.Trace(existing_record_colors[matched_i][0], existing_record_counts[matched_i][0], 
                                                         traces_storing_mode="vaooo", 
                                                         supplemental_colors= existing_record_colors[matched_i][1:], 
                                                         supplemental_counts = existing_record_counts[matched_i][1:]) 
-                            animation_queue.put(trace)  
-                        
-                        tracks = []              
-                        num_records_matched = animation_queue.qsize()
+                            moon_queue.put(trace)  
+                                   
+                        num_records_matched = moon_queue.qsize()
+                        is_running_live = False
+                        animation_length = int(day_length/num_records_matched*animation_fps*0.9) # 0.8 = a pause for computation time
+                        if animation_length < min_animation_length:
+                            animation_length = min_animation_length
+                            animation_fps = (animation_length*num_records_matched)/(day_length*60*0.9)
+                        tracks = [] #num = 5
+                        start_keyframe = None
+                        target_keyframe = None
+                        progress = 0
+                        animation_length = 0
+                        animation_plan = None
                     else:
-                        #no data to display - return to live mode
-                        pass
+                        #no data to display - return to live mode; see scenario B in diagram
+                        print("🌙 no moon data to display - return to live mode")
+                        is_running_live = True
+                else:
+                    print("🌙 empty record image")
+                    if using_HD108:
+                        #could match the illuminance here also? ... 
+                        send_hd108_colors_with_brightness(white_frame)
+                    
+            # stay in moon interaction that's already setup; see scenario C in diagram
             last_interaction_flag = True
-            last_interaction_time = time.time()//3600
         else:
             if last_interaction_flag:
-                with animation_queue.mutex:
-                    animation_queue.queue.clear()
+                # newly stopped moon interaction, see scenario D in diagram
+                print("newly stopped moon interaction")
+                with moon_queue.mutex:
+                    moon_queue.queue.clear()
+                # only take the most recent trace from the live capture
+                # ignore the backlog 
                 item = None
                 while not trace_queue.empty():
                     try:
@@ -823,62 +844,84 @@ def animation_thread_target():
                     except queue.Empty:
                         break
                 if item is not None:
-                    animation_queue.put(item)
+                    trace_queue.put(item)
+            # stay in live mode, see scenario E in diagram
             last_interaction_flag = False
+            is_running_live = True
             animation_fps = default_animation_fps
             num_records_matched = 0
-                    
-        if len(tracks) == 0 and not animation_queue.empty():
-            trace = animation_queue.get()
-            init_tracks(trace, tracks)
 
-            start_keyframe = generate_frame_from_trace_tracks(trace, tracks)
-            print("start keyframe generated")
-        else:
-            if animation_queue.empty(): 
-                if animation_plan is None:
-                    time.sleep(1/animation_fps*10) #actually waiting for capturing 
-                else:
-                    # move to the next animation frame
-                    if progress < len(animation_plan):
-                        f = animation_plan[progress]
+        # Diagram moon_mode and live_mode
+        if animation_plan is None or progress >= len(animation_plan):
+            no_incoming_data = False
+            if is_running_live:
+                no_incoming_data = trace_queue.empty()
+            else:
+                no_incoming_data = moon_queue.empty()
+            if no_incoming_data:
+                # hold last frame until mode switch or new trace enters
+                # MA and LA in diagrams
+                # print("hold last frame until mode switch or new trace enters")
+                time.sleep(1/animation_fps)
+                continue 
+            else:
+                print("has incoming data")
+                if start_keyframe is None:
+                    trace = trace_queue.get()
+                    init_tracks(trace, tracks)
+                    start_keyframe = generate_frame_from_trace_tracks(trace, tracks)
+                    print("start keyframe generated")
+                    no_next_keyframe = False
+                    if is_running_live:
+                        no_next_keyframe = trace_queue.empty()
+                    else:
+                        no_next_keyframe = moon_queue.empty()
+                    if no_next_keyframe:
+                        # display current frame until mode switch or new trace enters 
+                        # MC and LC in diagrams
+                        print("display current frame until mode switch or new trace enters")
+                        hold_plan = interpolate_two_frames(start_keyframe, start_keyframe, 1)
+                        f = hold_plan[0]
                         frame = f[1:].reshape(-1, 4)
                         if using_HD108:
                             send_hd108_colors_with_brightness(frame)
-                        print("----------", progress)
-                        progress += 1
-                    time.sleep(1/animation_fps)
-            else: # has new animation
-                if target_keyframe is not None:
-                    # bridge the old one 
-                    remaining_animation = animation_plan[progress:]
-                    for f in remaining_animation:
-                        frame = f[1:].reshape(-1, 4)/3
-                        if using_HD108:
-                            send_hd108_colors_with_brightness(frame)
-                        
-                        print("---------- rushing")
-                        time.sleep(1/15) #let's speed up a bit... 
-                
-                    start_keyframe = target_keyframe
-
-                if not trace_queue.empty():
-                    trace_queue.get() 
-                    # make sure to clear get the trace queue as well, 
-                    # but we hope it's the same as the animation queue 
-                trace = animation_queue.get()
-                target_keyframe = generate_frame_from_trace_tracks(trace, tracks)
-                if num_records_matched > 0: #in the interaction mode
-                    animation_length = int(day_length/num_records_matched*animation_fps*0.9) # 0.8 = a pause for computation time
-                    if animation_length < min_animation_length:
-                        animation_length = min_animation_length
-                        animation_fps = (animation_length*num_records_matched)/(day_length*60*0.9)
+                        time.sleep(1/animation_fps)
+                        continue
+                # make target keyframe
+                # MB and LB in diagrams
+                if is_running_live:
+                    trace = trace_queue.get()
                 else:
-                    animation_fps = default_animation_fps
-                    animation_length = int((target_keyframe[0] - start_keyframe[0])*animation_fps*0.8) # 0.8 = a pause for computation time
-                print("animation length", animation_length)
+                    trace = moon_queue.get()
+                target_keyframe = generate_frame_from_trace_tracks(trace, tracks)
+                # animation_fps = default_animation_fps
+                animation_length = int(day_length*60*animation_fps*0.8) # 0.8 = a pause for computation time
+                print("animation length", animation_length, "animation_fps", animation_fps)
                 progress = 0
-                animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)        
+                animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)
+                start_keyframe = target_keyframe
+        else:
+            f = animation_plan[progress]
+            frame = f[1:].reshape(-1, 4)
+            if using_HD108:
+                send_hd108_colors_with_brightness(frame)
+            progress += 1
+            if is_running_live:
+                if trace_queue.empty():
+                    # LD in live_mode diagram
+                    # proceed at normal speed
+                    print("---------- proceed at normal speed", progress)
+                    time.sleep(1/animation_fps)
+                else: 
+                    # rushing - has incoming live data
+                    #LE in live_mode diagram
+                    print("---------- rushing", progress)
+                    time.sleep(1/15) # rushing 
+            else:
+                #MD in moon_mode diagram
+                print("🌙 ---------- (moon) proceed at normal speed", progress)
+                time.sleep(1/animation_fps)
+        continue
 
 if has_animation:        
     # capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread

@@ -83,4 +83,4 @@ class MoonHelper:
         # existing_data_indices = is_in_list[is_in_list].index.tolist()
         existing_data_indices = np.where(np.isin(existing_hours, filtered_matches['Hour_POSIX']))[0]
         print(existing_data_indices)
-        return existing_data_indices
+        return target_illum, existing_data_indices
