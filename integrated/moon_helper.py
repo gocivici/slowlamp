@@ -37,7 +37,7 @@ class MoonHelper:
         df_valid = self.df_hourly_moon[self.df_hourly_moon.index <= current_time].copy()
         df_search = df_valid[df_valid.index > index_start_time].copy()
         
-        print("df_search", df_valid, df_search)
+        # print("df_search", df_valid, df_search)
         # Calculate the baseline absolute difference
         df_search['Abs_Diff'] = (df_search['Illumination'] - target_illum).abs()
 

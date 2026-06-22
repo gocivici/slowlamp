@@ -807,7 +807,7 @@ def animation_thread_target():
                                    
                         num_records_matched = moon_queue.qsize()
                         is_running_live = False
-                        animation_length = int(day_length/num_records_matched*animation_fps*0.9) # 0.8 = a pause for computation time
+                        animation_length = int(day_length*60/num_records_matched*animation_fps*0.9) # 0.8 = a pause for computation time
                         if animation_length < min_animation_length:
                             animation_length = min_animation_length
                             animation_fps = (animation_length*num_records_matched)/(day_length*60*0.9)
@@ -815,11 +815,11 @@ def animation_thread_target():
                         start_keyframe = None
                         target_keyframe = None
                         progress = 0
-                        animation_length = 0
                         animation_plan = None
                     else:
                         #no data to display - return to live mode; see scenario B in diagram
                         print("🌙 no moon data to display - return to live mode")
+                        animation_plan = None
                         is_running_live = True
                 else:
                     print("🌙 empty record image")
@@ -845,6 +845,8 @@ def animation_thread_target():
                         break
                 if item is not None:
                     trace_queue.put(item)
+                animation_plan = None
+                progress = 0
             # stay in live mode, see scenario E in diagram
             last_interaction_flag = False
             is_running_live = True
@@ -867,7 +869,10 @@ def animation_thread_target():
             else:
                 print("has incoming data")
                 if start_keyframe is None:
-                    trace = trace_queue.get()
+                    if is_running_live:
+                        trace = trace_queue.get()
+                    else:
+                        trace = moon_queue.get()
                     init_tracks(trace, tracks)
                     start_keyframe = generate_frame_from_trace_tracks(trace, tracks)
                     print("start keyframe generated")
@@ -893,9 +898,11 @@ def animation_thread_target():
                     trace = trace_queue.get()
                 else:
                     trace = moon_queue.get()
+                # print("tracks", tracks)
                 target_keyframe = generate_frame_from_trace_tracks(trace, tracks)
                 # animation_fps = default_animation_fps
-                animation_length = int(day_length*60*animation_fps*0.8) # 0.8 = a pause for computation time
+                if is_running_live:
+                    animation_length = int(day_length*60*animation_fps*0.8) # 0.8 = a pause for computation time
                 print("animation length", animation_length, "animation_fps", animation_fps)
                 progress = 0
                 animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)
