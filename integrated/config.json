@@ -7,6 +7,6 @@
     "diyVersion" : false,
     "has_animation": true,
     "display_cv2_window" : true,
-    "led_color_data_folder": "/home/slowlamp2/Documents/slowlamp/HD108/",
-    "camera_tuning_file": "/home/slowlamp2/Documents/slowlamp/image_proc/test.json"
+    "led_color_data_folder": "/home/slowlamp4/Documents/slowlamp/HD108/",
+    "camera_tuning_file": ""
 }

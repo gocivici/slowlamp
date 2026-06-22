@@ -123,8 +123,8 @@ if using_HD108:
         
         for led_i, (brightness, r16, g16, b16) in enumerate(list(colors_16bit)):
             brightness, r16, g16, b16 = map(int, (brightness, r16, g16, b16))
-            if led_i > 390:
-                print("int values for LED", led_i, ": ",  brightness, r16, g16, b16)
+            # if led_i > 390:
+              #  print("int values for LED", led_i, ": ",  brightness, r16, g16, b16)
             # print(int(r16/255), int(g16/255), int(b16/255))
             if brightness <= 0:
                 brightness_frame = (1 << 15) | (1 << 10) | (1 << 5) | 1
@@ -166,7 +166,7 @@ header = ["frame"]
 for i in range(num_leds):
     header.extend([f"light_{i}_Wt", f"light_{i}_R", f"light_{i}_G", f"light_{i}_B" ])
 
-white_frame = [2, 2**16-1, 2**16-1, 2**16-1]*num_leds
+white_frame = [[2, 2**16-1, 2**16-1, 2**16-1]]*num_leds
 
 canvas = None
 canvas_size = 500

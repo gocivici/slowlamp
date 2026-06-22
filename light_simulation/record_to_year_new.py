@@ -4,6 +4,7 @@ import cv2 #pip install opencv-python ||| pip3 install opencv-contrib-python==4.
 import re
 from datetime import datetime, timedelta
 import cover_sim
+from zoneinfo import ZoneInfo
 
 # record = "C:/work/slow_lamp/light_simulation/20250723_five_days.txt"
 record_files = ["20251110_235248_fgc_yumeng.txt", "20260223_082940_fgc_integrated.txt", 
@@ -184,7 +185,8 @@ for i in range(start_day, end_day):
                         supplemental_colors[0], supplemental_counts[0], supplemental_colors[1], supplemental_counts[1],
                         supplemental_colors[2], supplemental_counts[2], supplemental_colors[3], supplemental_counts[3]]
         
-        cover_sim.save(*data_entry, hour_from_start)
+        current_hour_utc = current_hour.replace(tzinfo=ZoneInfo("America/Vancouver"))
+        cover_sim.save(*data_entry, current_hour_utc.timestamp()//3600)
 
 #         trace = Trace(vr_color[1:], i, hour, count = vr_color[0], traces_storing_mode="vaooo", 
 #                     supplemental_colors=supplemental_colors,
