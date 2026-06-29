@@ -12,7 +12,7 @@ from colormath.color_conversions import convert_color
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 
-from spiral import drawSpiral
+from slowlampthree import generate_slowlamp_views
 
 import helper_classes
 import threading
@@ -22,6 +22,7 @@ import colour
 
 import cover
 import json
+import interaction
 
 
 def loadConfig(pathtofile):
@@ -541,11 +542,15 @@ def capture_thread_target():
         # saveColor(vibrant_color[0], filename = "archive_vibrant.png")
         # saveColor(cluster_color, filename = "archive_cluster.png")
         # saveComposition(largest_color, vibrant_color, file_prefix = "composition_")
-        if diyVersion:    
+        if diyVersion:
             currentData = cover.retrieve()
-            spiralImage = drawSpiral(currentData)
-            cv2.imwrite("spiral.png", spiralImage)
-            cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", "spiral.png"]
+            img_24h, img_30d, img_365d, img_all_time = generate_slowlamp_views(currentData)
+            cv2.imwrite("view_24h.png", img_24h)
+            cv2.imwrite("view_30d.png", img_30d)
+            cv2.imwrite("view_365d.png", img_365d)
+            cv2.imwrite("view_all_time.png", img_all_time)
+            display_image = interaction.get_current_image()
+            cmd = ["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", "--noverbose", "-a", display_image]
             subprocess.run(cmd, check=True)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -757,7 +762,10 @@ def animation_thread_target():
                 progress = 0
                 animation_plan = interpolate_two_frames(start_keyframe, target_keyframe, animation_length)        
 
-if has_animation:        
+if diyVersion:
+    interaction.start()
+
+if has_animation:
     # capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
     animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
 

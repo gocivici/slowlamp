@@ -76,7 +76,27 @@ def generate_slowlamp_views(all_data):
     # VIEW 2: Last 30 Days (Cycle of 24)
     view_30d = [d for d in all_data if d['timestamp'] > (latest_ts - (24 * 30))]
 
-    # VIEW 3: All-Time (Daily Average, Cycle of 30)
+    # VIEW 3: Last 365 Days (Daily Average, Cycle of 30)
+    view_365d_data = [d for d in all_data if d['timestamp'] > (latest_ts - (24 * 365))]
+    daily_bins_365 = {}
+    for entry in view_365d_data:
+        day_id = int(entry['timestamp'] // 24)
+        if day_id not in daily_bins_365:
+            daily_bins_365[day_id] = {'ac1': [], 'vc': []}
+        daily_bins_365[day_id]['ac1'].append(entry['ac1'])
+        daily_bins_365[day_id]['vc'].append(entry['vc'])
+
+    view_365d_avg = []
+    for day_id in sorted(daily_bins_365.keys()):
+        avg_ac = np.mean(daily_bins_365[day_id]['ac1'], axis=0).astype(int)
+        avg_vc = np.mean(daily_bins_365[day_id]['vc'], axis=0).astype(int)
+        view_365d_avg.append({
+            'timestamp': day_id * 24.0,
+            'ac1': tuple(avg_ac),
+            'vc': tuple(avg_vc)
+        })
+
+    # VIEW 4: All-Time (Daily Average, Cycle of 30)
     daily_bins = {}
     for entry in all_data:
         day_id = int(entry['timestamp'] // 24)
@@ -89,16 +109,15 @@ def generate_slowlamp_views(all_data):
     for day_id in sorted(daily_bins.keys()):
         avg_ac = np.mean(daily_bins[day_id]['ac1'], axis=0).astype(int)
         avg_vc = np.mean(daily_bins[day_id]['vc'], axis=0).astype(int)
-        
         view_all_time_avg.append({
-            'timestamp': day_id * 24.0, 
-            'ac1': tuple(avg_ac), 
+            'timestamp': day_id * 24.0,
+            'ac1': tuple(avg_ac),
             'vc': tuple(avg_vc)
         })
-    
-    # Draw them with different 'pulses'
+
     img_24h = drawSpiral(view_24h, cycle_steps=24)
     img_30d = drawSpiral(view_30d, cycle_steps=24)
-    img_all_time = drawSpiral(view_all_time_avg, cycle_steps=30) # Monthly cycle
+    img_365d = drawSpiral(view_365d_avg, cycle_steps=30)
+    img_all_time = drawSpiral(view_all_time_avg, cycle_steps=30)
 
-    return img_24h, img_30d, img_all_time
+    return img_24h, img_30d, img_365d, img_all_time
