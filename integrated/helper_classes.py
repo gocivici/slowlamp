@@ -120,6 +120,24 @@ def get_led_points_23cm():
 
     return led_points
 
+def get_led_points_pcb():
+    index_at_ring = [72, 136, 196, 248, 296, 336, 368, 396, 416, 428, 434, 435]
+    max_ring = 220 #d = mm
+    min_ring = 20 #d = mm
+    led_points = []
+    for i in range(len(index_at_ring)):
+        current_num = index_at_ring[i]
+        if i > 0:
+            current_num -= index_at_ring[i-1]
+        current_r = (max_ring/2-min_ring/2)/(len(index_at_ring)-2)*(len(index_at_ring)-2-i) + min_ring/2
+        # len = 12, i = 11, r = 100/10*(-1)+10 = 0
+        for l in range(current_num):
+            x = current_r*np.cos(np.pi*2/current_num*l)
+            y = current_r*np.sin(np.pi*2/current_num*l)
+            led_points.append([x, y])
+    print(f"initialized lamp with {len(led_points)} leds. ")
+    return led_points
+
 class ColorTrack:
     def __init__(self, color, count, base_watt, position_group = 0):
         self.color = np.array(color)
