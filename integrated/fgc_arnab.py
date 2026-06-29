@@ -738,7 +738,7 @@ def interpolate_two_frames(key_frame1, key_frame2, animation_length):
         input_pixels = correct_color_HD108.correct_color_from_lab(lab_full)
         # print(input_pixels[0])
 
-        input_brightness = np.clip((watt/base_watt)*10, 1, 10)
+        input_brightness = np.clip((watt/base_watt)*10, 1, 6)
         animation_brightness = helper_classes.interpolate_stretched(frame_indices, input_brightness, time_arr)
 
         animation_plan[:, i] = animation_brightness

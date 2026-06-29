@@ -136,7 +136,7 @@ def get_led_points_pcb():
             y = current_r*np.sin(np.pi*2/current_num*l)
             led_points.append([x, y])
     print(f"initialized lamp with {len(led_points)} leds. ")
-    return led_points
+    return np.array(led_points)
 
 class ColorTrack:
     def __init__(self, color, count, base_watt, position_group = 0):
