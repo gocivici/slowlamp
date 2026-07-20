@@ -292,20 +292,88 @@ def refine_clusters_iteratively(led_coordinates, target_counts, other_centroids,
     
     return cluster_assignments, centers
 
+# https://bottosson.github.io/posts/oklab/
+def linear_sRGB_to_oklab(c):
+    cr = c[0]
+    cg = c[1]
+    cb = c[2]
+
+    l = 0.4122214708 * cr + 0.5363325363 * cg + 0.0514459929 * cb
+    m = 0.2119034982 * cr + 0.6806995451 * cg + 0.1073969566 * cb
+    s = 0.0883024619 * cr + 0.2817188376 * cg + 0.6299787005 * cb
+
+    l_ = l**(1/3)
+    m_ = m**(1/3)
+    s_ = s**(1/3)
+
+    return [
+        0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_,
+        1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_,
+        0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_,]
+
+def sRGB_to_oklab_vec(c_vec):
+    # c_vec = [[r1, g1, b1], [r2, g2, b2], ...] gamma corrected, 0-1
+
+    # https://en.wikipedia.org/wiki/SRGB
+    lsrgb = np.where(c_vec <= 0.4045, c_vec/12.92, ((c_vec+0.055)/1.055)**(2.4))
+
+    M1 = np.array([[0.4122214708, 0.5363325363, 0.0514459929],
+          [0.2119034982, 0.6806995451, 0.1073969566],
+          [0.0883024619, 0.2817188376, 0.6299787005]])
+    
+    lms = lsrgb @ M1
+
+    lms_ = lms**(1/3)
+
+    M2 = np.array([[0.2104542553, + 0.7936177850, - 0.0040720468],
+        [1.9779984951, - 2.4285922050, + 0.4505937099],
+        [0.0259040371, + 0.7827717662, - 0.8086757660]])
+    
+    return lms_ @ M2
+
+def oklab_to_sRGB(oklab_vec):
+    M1 = np.array([[1,  + 0.3963377774, + 0.2158037573],
+                   [1,  - 0.1055613458, - 0.0638541728],
+                [1, - 0.0894841775, - 1.2914855480]])
+    
+    lms_ = oklab_vec @ M1
+
+    lms = lms_**3
+
+    M2 =np.array([
+		[+4.0767416621, - 3.3077115913, + 0.2309699292],
+		[-1.2684380046, + 2.6097574011, - 0.3413193965],
+		[-0.0041960863, - 0.7034186147, + 1.7076147010]])
+    
+    lsrgb = lms @ M2
+
+    srgb = np.where(lsrgb >= 0.0031308, (1.055)*lsrgb**(1.0/2.4)-0.055, 12.92*lsrgb )
+    
+    return srgb*255
+ 
+
 def convert_frame_to_oklab(frame):
     oklab_frame = np.zeros_like(frame)
     oklab_frame[0] = frame[0]
-    for i in range(1, len(frame), 4):
-        index = (i - 1) // 4
-        r = float(frame[i + 1])
-        g = float(frame[i + 2])
-        b = float(frame[i + 3])
-        color_rgb = (r, g, b)
-        color_oklab = colour.convert(color_rgb, "sRGB", "Oklab")
-        oklab_frame[i] = frame[i]
-        oklab_frame[i+1] = color_oklab[0]
-        oklab_frame[i+2] = color_oklab[1]
-        oklab_frame[i+3] = color_oklab[2]
+    # for i in range(1, len(frame), 4):
+    #     index = (i - 1) // 4
+    #     r = float(frame[i + 1])
+    #     g = float(frame[i + 2])
+    #     b = float(frame[i + 3])
+    #     color_rgb = (r, g, b)
+    #     
+    #     color_oklab = colour.convert(color_rgb, "sRGB", "Oklab")
+    #     oklab_frame[i] = frame[i]
+    #     oklab_frame[i+1] = color_oklab[0]
+    #     oklab_frame[i+2] = color_oklab[1]
+    #     oklab_frame[i+3] = color_oklab[2]
+    data = frame[1:].reshape(-1, 4)
+    watts = data[:, 0]
+    srgb = data[:, 1:]
+    oklab = sRGB_to_oklab_vec(srgb)
+    oklab_data = np.hstack([watts[:, np.newaxis], oklab])
+    oklab_frame[1:] = oklab_data.flatten()
+
     return oklab_frame
 
 def interpolate_stretched(arr_X, arr_Y, new_X):

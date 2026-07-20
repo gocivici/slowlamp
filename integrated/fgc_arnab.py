@@ -36,7 +36,7 @@ def loadConfig(pathtofile):
             return config
 
 #load config data json format
-configData = loadConfig('integrated/config.json')
+configData = loadConfig('integrated/config_laptop.json')
 
 
 using_pi = configData.get("using_pi")
@@ -727,16 +727,21 @@ def interpolate_two_frames(key_frame1, key_frame2, animation_length):
         oklab_full = np.stack([l_full, a_full, b_full], axis = 1)
         # print("oklab_full.shape", oklab_full.shape)
 
-        lab_full = [] 
-        for flab in oklab_full:
-            color_lab = colour.convert(flab, "Oklab", "CIE Lab")
-            lab_full.append(color_lab)
+        # lab_full = [] 
+        # for flab in oklab_full:
+        #     
+        #     color_lab = colour.convert(flab, "Oklab", "CIE Lab")
+        #     lab_full.append(color_lab)
 
-        lab_full = np.array(lab_full)
-        # print(lab_full[0])
+        # lab_full = np.array(lab_full)
+
+        rgb_full = helper_classes.oklab_to_sRGB(oklab_full)
+        # print(rgb_full[0])
         
-        input_pixels = correct_color_HD108.correct_color_from_lab(lab_full)
+        #TODO: not color correcting yet
+        # input_pixels = correct_color_HD108.correct_color_from_lab(lab_full)
         # print(input_pixels[0])
+        input_pixels = rgb_full
 
         input_brightness = np.clip((watt/base_watt)*10, 1, 6)
         animation_brightness = helper_classes.interpolate_stretched(frame_indices, input_brightness, time_arr)

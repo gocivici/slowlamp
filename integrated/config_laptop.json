@@ -1,0 +1,12 @@
+{
+    "using_pi": false,
+    "day_length" : 3,
+    "animation_fps" : 0.5,
+    "fast_stream_interval": 9,
+    "using_HD108" : false,
+    "diyVersion" : false,
+    "has_animation": true,
+    "display_cv2_window" : true,
+    "led_color_data_folder": "c:/work/slow_lamp/slowlamp",
+    "camera_tuning_file": ""
+}
