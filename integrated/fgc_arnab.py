@@ -156,7 +156,7 @@ if not using_pi:
         print("Cannot open camera")
         exit()
 
-led_points = helper_classes.get_led_points_pcb()
+led_points = helper_classes.get_led_points_23cm()
 
 num_leds = len(led_points)
 base_watt = 70
@@ -741,7 +741,8 @@ def interpolate_two_frames(key_frame1, key_frame2, animation_length):
         #TODO: not color correcting yet
         # input_pixels = correct_color_HD108.correct_color_from_lab(lab_full)
         # print(input_pixels[0])
-        input_pixels = rgb_full
+        input_pixels = np.clip(rgb_full*255, 0, 2**16-1).round()
+        # print(input_pixels[0])
 
         input_brightness = np.clip((watt/base_watt)*10, 1, 6)
         animation_brightness = helper_classes.interpolate_stretched(frame_indices, input_brightness, time_arr)
