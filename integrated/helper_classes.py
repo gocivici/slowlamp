@@ -321,7 +321,7 @@ def sRGB_to_oklab_vec(c_vec):
           [0.2119034982, 0.6806995451, 0.1073969566],
           [0.0883024619, 0.2817188376, 0.6299787005]])
     
-    lms = lsrgb @ M1
+    lms = lsrgb @ M1.T
 
     lms_ = np.cbrt(lms)
 
@@ -329,14 +329,14 @@ def sRGB_to_oklab_vec(c_vec):
         [1.9779984951, - 2.4285922050, + 0.4505937099],
         [0.0259040371, + 0.7827717662, - 0.8086757660]])
     
-    return lms_ @ M2
+    return lms_ @ M2.T
 
 def oklab_to_linear_srgb(oklab_vec):
     M1 = np.array([[1,  + 0.3963377774, + 0.2158037573],
                    [1,  - 0.1055613458, - 0.0638541728],
                 [1, - 0.0894841775, - 1.2914855480]])
     
-    lms_ = oklab_vec @ M1
+    lms_ = oklab_vec @ M1.T
 
     lms = lms_**3
 
@@ -345,7 +345,7 @@ def oklab_to_linear_srgb(oklab_vec):
 		[-1.2684380046, + 2.6097574011, - 0.3413193965],
 		[-0.0041960863, - 0.7034186147, + 1.7076147010]])
     
-    lsrgb = lms @ M2
+    lsrgb = lms @ M2.T
 
     return lsrgb
 
