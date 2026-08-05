@@ -315,7 +315,7 @@ def sRGB_to_oklab_vec(c_vec):
     # c_vec = [[r1, g1, b1], [r2, g2, b2], ...] gamma corrected, 0-1
 
     # https://en.wikipedia.org/wiki/SRGB
-    lsrgb = np.where(c_vec <= 0.4045, c_vec/12.92, ((c_vec+0.055)/1.055)**(2.4))
+    lsrgb = np.where(c_vec <= 0.04045, c_vec/12.92, ((c_vec+0.055)/1.055)**(2.4))
 
     M1 = np.array([[0.4122214708, 0.5363325363, 0.0514459929],
           [0.2119034982, 0.6806995451, 0.1073969566],
@@ -323,7 +323,7 @@ def sRGB_to_oklab_vec(c_vec):
     
     lms = lsrgb @ M1
 
-    lms_ = lms**(1/3)
+    lms_ = np.cbrt(lms)
 
     M2 = np.array([[0.2104542553, + 0.7936177850, - 0.0040720468],
         [1.9779984951, - 2.4285922050, + 0.4505937099],
@@ -331,7 +331,7 @@ def sRGB_to_oklab_vec(c_vec):
     
     return lms_ @ M2
 
-def oklab_to_sRGB(oklab_vec):
+def oklab_to_linear_srgb(oklab_vec):
     M1 = np.array([[1,  + 0.3963377774, + 0.2158037573],
                    [1,  - 0.1055613458, - 0.0638541728],
                 [1, - 0.0894841775, - 1.2914855480]])
@@ -347,10 +347,76 @@ def oklab_to_sRGB(oklab_vec):
     
     lsrgb = lms @ M2
 
-    srgb = np.where(lsrgb >= 0.0031308, (1.055)*lsrgb**(1.0/2.4)-0.055, 12.92*lsrgb )
+    return lsrgb
+
+    # srgb = np.where(lsrgb >= 0.0031308, (1.055)*lsrgb**(1.0/2.4)-0.055, 12.92*lsrgb )
     
+    # return srgb*255
+
+
+def gamut_map_oklab_vectorized(oklab_vec, max_iters=10):
+    """
+    Shrinks Chroma (saturation) for out-of-gamut Oklab colors 
+    until they fit within the sRGB gamut, preserving Hue and Lightness.
+    """
+    L = oklab_vec[:, 0]
+    a = oklab_vec[:, 1]
+    b = oklab_vec[:, 2]
+
+    # 1. Calculate original Chroma
+    C_orig = np.hypot(a, b)
+    
+    # 2. Extract the normalized Hue direction (a/C, b/C)
+    # Adding a tiny epsilon prevents division by zero on pure grays
+    safe_C = np.where(C_orig == 0, 1e-8, C_orig)
+    a_norm = a / safe_C
+    b_norm = b / safe_C
+
+    # 3. Set up binary search boundaries for Chroma
+    C_min = np.zeros_like(C_orig) # A perfectly neutral gray
+    C_max = C_orig.copy()         # The original, potentially out-of-bounds saturation
+    C_current = C_orig.copy()
+    
+    for _ in range(max_iters):
+        # Reconstruct (a, b) using the current Chroma guess
+        a_curr = C_current * a_norm
+        b_curr = C_current * b_norm
+        
+        # Convert to linear sRGB (Insert your existing Oklab -> Linear sRGB math here)
+        # Assuming oklab_to_linear_srgb returns a tuple of (R, G, B) arrays
+        oklab_curr = np.hstack([L[:, np.newaxis], a_curr[:, np.newaxis], b_curr[:, np.newaxis]])
+        rgb_curr = oklab_to_linear_srgb(oklab_curr)
+        R = rgb_curr[:, 0]
+        G = rgb_curr[:, 1]
+        B = rgb_curr[:, 2]
+        
+        # Check which pixels are currently safely inside the sRGB gamut
+        in_gamut = (R >= 0.0) & (R <= 1.0) & \
+                   (G >= 0.0) & (G <= 1.0) & \
+                   (B >= 0.0) & (B <= 1.0)
+        
+        # Update bounds:
+        # If in gamut, the safe floor moves up (we can try more saturation)
+        C_min = np.where(in_gamut, C_current, C_min)
+        # If out of gamut, the ceiling moves down (we need less saturation)
+        C_max = np.where(~in_gamut, C_current, C_max)
+        
+        # Test the exact middle of the new bounds on the next loop
+        C_current = (C_min + C_max) / 2.0
+        
+    # Reconstruct the final, safely mapped a and b channels using the highest safe Chroma
+    a_mapped = C_min * a_norm
+    b_mapped = C_min * b_norm
+
+    oklab_mapped = np.hstack([L[:, np.newaxis], a_mapped[:, np.newaxis], b_mapped[:, np.newaxis]])
+            
+    return oklab_mapped
+
+def oklab_to_srgb_255(oklab_vec):
+    oklab_mapped = gamut_map_oklab_vectorized(oklab_vec)
+    lsrgb = oklab_to_linear_srgb(oklab_mapped)
+    srgb = np.where(lsrgb >= 0.0031308, (1.055)*lsrgb**(1.0/2.4)-0.055, 12.92*lsrgb )
     return srgb*255
- 
 
 def convert_frame_to_oklab(frame):
     oklab_frame = np.zeros_like(frame)

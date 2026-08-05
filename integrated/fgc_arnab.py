@@ -735,7 +735,7 @@ def interpolate_two_frames(key_frame1, key_frame2, animation_length):
 
         # lab_full = np.array(lab_full)
 
-        rgb_full = helper_classes.oklab_to_sRGB(oklab_full)
+        rgb_full = helper_classes.oklab_to_srgb_255(oklab_full)
         # print(rgb_full[0])
         
         #TODO: not color correcting yet
@@ -891,10 +891,11 @@ def animation_thread_target():
                         # display current frame until mode switch or new trace enters 
                         # MC and LC in diagrams
                         print("display current frame until mode switch or new trace enters")
-                        hold_plan = interpolate_two_frames(start_keyframe, start_keyframe, 1)
+                        hold_plan = interpolate_two_frames(start_keyframe, start_keyframe, 3)
                         f = hold_plan[0]
                         frame = f[1:].reshape(-1, 4)
                         if using_HD108:
+                            #TODO: This is not showing actually
                             send_hd108_colors_with_brightness(frame)
                         time.sleep(1/animation_fps)
                         continue
