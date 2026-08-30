@@ -412,10 +412,86 @@ def gamut_map_oklab_vectorized(oklab_vec, max_iters=10):
             
     return oklab_mapped
 
+def _linear_to_srgb(lin):
+    return np.where(lin >= 0.0031308,
+                    1.055 * lin ** (1.0 / 2.4) - 0.055,
+                    12.92 * lin)
+
+
+def gamut_map_oklab_perceptual(oklab_vec, max_iters=10):
+    """
+    Perceptual gamut mapping in Oklab: finds the closest in-gamut colour
+    at the same hue by searching both Lightness and Chroma, minimising
+    Euclidean distance in Oklab (which is perceptual distance).
+    """
+    oklab_vec = np.asarray(oklab_vec, dtype=np.float64)
+    squeeze = False
+    if oklab_vec.ndim == 1:
+        oklab_vec = oklab_vec.reshape(1, -1)
+        squeeze = True
+
+    L = oklab_vec[:, 0].copy()
+    a = oklab_vec[:, 1]
+    b = oklab_vec[:, 2]
+
+    C_orig = np.hypot(a, b)
+    safe_C = np.where(C_orig == 0, 1e-8, C_orig)
+    a_norm = a / safe_C
+    b_norm = b / safe_C
+
+    # Phase 1: chroma-only clamp (same as gamut_map_oklab_vectorized)
+    C_lo = np.zeros_like(C_orig)
+    C_hi = C_orig.copy()
+    for _ in range(max_iters):
+        C_mid = (C_lo + C_hi) / 2.0
+        rgb = oklab_to_linear_srgb(np.column_stack([L, C_mid * a_norm, C_mid * b_norm]))
+        in_gamut = np.all((rgb >= 0.0) & (rgb <= 1.0), axis=1)
+        C_lo = np.where(in_gamut, C_mid, C_lo)
+        C_hi = np.where(~in_gamut, C_mid, C_hi)
+
+    already_ok = C_orig <= C_lo
+    best_L = L.copy()
+    best_C = np.where(already_ok, C_orig, C_lo)
+
+    # Phase 2: for out-of-gamut colours, try shifting L to preserve more chroma
+    needs_mapping = ~already_ok
+    if np.any(needs_mapping):
+        idx = np.where(needs_mapping)[0]
+        L_orig = L[idx]
+        C_orig_sub = C_orig[idx]
+        a_norm_sub = a_norm[idx]
+        b_norm_sub = b_norm[idx]
+        best_dist = np.sqrt((C_orig_sub - best_C[idx]) ** 2)
+
+        for L_offset in np.linspace(-0.15, 0.15, 13):
+            L_test = np.clip(L_orig + L_offset, 0.0, 1.0)
+
+            c_lo = np.zeros(len(idx))
+            c_hi = C_orig_sub.copy()
+            for _ in range(max_iters):
+                c_mid = (c_lo + c_hi) / 2.0
+                rgb = oklab_to_linear_srgb(
+                    np.column_stack([L_test, c_mid * a_norm_sub, c_mid * b_norm_sub])
+                )
+                ig = np.all((rgb >= 0.0) & (rgb <= 1.0), axis=1)
+                c_lo = np.where(ig, c_mid, c_lo)
+                c_hi = np.where(~ig, c_mid, c_hi)
+
+            C_cand = np.minimum(c_lo, C_orig_sub)
+            dist = np.sqrt((L_test - L_orig) ** 2 + (C_cand - C_orig_sub) ** 2)
+
+            improved = dist < best_dist
+            best_dist = np.where(improved, dist, best_dist)
+            best_L[idx] = np.where(improved, L_test, best_L[idx])
+            best_C[idx] = np.where(improved, C_cand, best_C[idx])
+
+    mapped = np.column_stack([best_L, best_C * a_norm, best_C * b_norm])
+    return mapped[0] if squeeze else mapped
+
 def oklab_to_srgb_255(oklab_vec):
-    oklab_mapped = gamut_map_oklab_vectorized(oklab_vec)
+    oklab_mapped = gamut_map_oklab_perceptual(oklab_vec)
     lsrgb = oklab_to_linear_srgb(oklab_mapped)
-    srgb = np.where(lsrgb >= 0.0031308, (1.055)*lsrgb**(1.0/2.4)-0.055, 12.92*lsrgb )
+    srgb = _linear_to_srgb(lsrgb)
     return srgb*255
 
 def convert_frame_to_oklab(frame):
