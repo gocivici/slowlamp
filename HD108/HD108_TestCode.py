@@ -30,7 +30,7 @@ def send_hd108_colors(colors_16bit, global_brightness=15):
         
     num_end = 2 * (len(colors_16bit) + 1) 
     data.extend([0xFF] * num_end)  # End frame
-    spi.writebytes(data)
+    spi.writebytes2(data)
     spi.close()
 
 # Test code

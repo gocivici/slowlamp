@@ -156,7 +156,7 @@ if not using_pi:
         print("Cannot open camera")
         exit()
 
-led_points = helper_classes.get_led_points_23cm()
+led_points = helper_classes.get_led_points_pcb()
 
 num_leds = len(led_points)
 base_watt = 70
