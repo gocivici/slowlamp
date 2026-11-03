@@ -50,6 +50,7 @@ fast_stream_interval = configData.get("fast_stream_interval")*60
 
 if has_animation:
     import correct_color_HD108
+    animation_thread = None
 
 filename_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 storage_file = open(f"{filename_time}_fgc_arnab.txt", "w")
@@ -60,6 +61,12 @@ trace_queue = queue.Queue()
 
     
 moon_interaction_flag = threading.Event()
+using_HD108_flag = threading.Event()
+
+if using_HD108:
+    using_HD108_flag.set()
+else:
+    using_HD108_flag.clear()
 
 if using_pi:
     # import board
@@ -104,10 +111,28 @@ if using_pi:
         print("Switch OFF: Returning to standard animation.")
         moon_interaction_flag.clear()  # Changes flag to False
 
+    def enable_lights():
+        print("Switching on HD108")
+        using_HD108_flag.set()
+
+    def disable_lights():
+        print("Switching on HD108")
+        using_HD108_flag.clear()
+
+    def halt_program():
+        pass #todo 
+    
     # Initialize the button (assuming GPIO 17 like before)
     button = Button(17)
     button.when_pressed = trigger_interaction
     button.when_released = trigger_standard
+
+    with_light_button = Button(27)
+    with_sensing_button = Button(22)
+    with_light_button.when_pressed = enable_lights
+    with_light_button.when_released = disable_lights
+    # with_sensing_button.when_pressed = enable_program #TODO: give to power management
+    with_sensing_button.when_released = halt_program 
 
 if using_HD108:
     import spidev
@@ -214,15 +239,18 @@ def capture_image():
     global using_pi
     if using_pi:
         frames = []
-        for exp in exposure_time: 
-            camera.set_controls({"ExposureTime": exp, "AnalogueGain": 1.0}) 
-            camera.start(show_preview=False)
-            # file_name = f"frame_{exp}.jpg"
-            frame_plain = camera.capture_array()
-            frames.append(frame_plain)
-            # cv2.imwrite(file_name, frame_plain)# no saving to memory 
+        camera.start(show_preview=False)
+        try: 
+            for exp in exposure_time: 
+                camera.set_controls({"ExposureTime": exp, "AnalogueGain": 1.0}) 
+                # file_name = f"frame_{exp}.jpg"
+                time.sleep(0.05)
+                frame_plain = camera.capture_array()
+                frames.append(frame_plain)
+                # cv2.imwrite(file_name, frame_plain)# no saving to memory 
+        finally:
             camera.stop()
-
+            
         mergeMertens = cv2.createMergeMertens()
         fusion_res  = mergeMertens.process(frames)
         frame = np.clip(fusion_res * 255, 0, 255).astype('uint8')
@@ -439,6 +467,7 @@ def dominantColor(waitTime):
 
             
     print("Waiting seconds or a 'c' key press:", waitTime)
+    user_triggered = False
     if waitTime > 0:
         user_triggered = smart_delay(waitTime)
 
@@ -778,7 +807,13 @@ def animation_thread_target():
                 cover_img = "archive.png"
                 # cover_start_time = datetime.strptime("2025-11-11 00:53:34", "%Y-%m-%d %H:%M:%S") 
                 data = cover.retrieve(filename=cover_img)
-                
+
+                if len(data) == 0:
+                    print("🌙 empty archive cover image")
+                    if using_HD108_flag.is_set():
+                        send_hd108_colors_with_brightness(white_frame)
+                    continue
+
                 cover_start_time = datetime.fromtimestamp(data[0]["timestamp"]*3600, tz=ZoneInfo("America/Vancouver"))
                 print("🌙 archive cover image start time: ", cover_start_time)
 
@@ -795,7 +830,7 @@ def animation_thread_target():
                 if len(existing_hours)>0:
                     ## Match the current illumation and change 
                     curr_illum, existing_data_indices = moon_helper.find_matched_indices(current_time, existing_hours)
-                    if using_HD108:
+                    if using_HD108_flag.is_set():
                         #could match the illuminance here... 
                         send_hd108_colors_with_brightness(white_frame)
                     if len(existing_data_indices) > 0:
@@ -829,7 +864,7 @@ def animation_thread_target():
                         is_running_live = True
                 else:
                     print("🌙 empty record image")
-                    if using_HD108:
+                    if using_HD108_flag.is_set():
                         #could match the illuminance here also? ... 
                         send_hd108_colors_with_brightness(white_frame)
                     
@@ -894,7 +929,7 @@ def animation_thread_target():
                         hold_plan = interpolate_two_frames(start_keyframe, start_keyframe, 3)
                         f = hold_plan[0]
                         frame = f[1:].reshape(-1, 4)
-                        if using_HD108:
+                        if using_HD108_flag.is_set():
                             #TODO: This is not showing actually
                             send_hd108_colors_with_brightness(frame)
                         time.sleep(1/animation_fps)
@@ -917,7 +952,7 @@ def animation_thread_target():
         else:
             f = animation_plan[progress]
             frame = f[1:].reshape(-1, 4)
-            if using_HD108:
+            if using_HD108_flag.is_set():
                 send_hd108_colors_with_brightness(frame)
             progress += 1
             if is_running_live:
@@ -939,7 +974,7 @@ def animation_thread_target():
 
 if has_animation:        
     # capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
-    animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
+    animation_thread = threading.Thread(target=animation_thread_target)
 
     # capture_thread.start()
     animation_thread.start()
