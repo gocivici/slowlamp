@@ -36,7 +36,7 @@ def loadConfig(pathtofile):
             return config
 
 #load config data json format
-configData = loadConfig('integrated/config_laptop.json')
+configData = loadConfig('integrated/config.json')
 
 
 using_pi = configData.get("using_pi")
@@ -116,7 +116,10 @@ if using_pi:
         using_HD108_flag.set()
 
     def disable_lights():
-        print("Switching on HD108")
+        print("Switching off HD108")
+        colors_16bit = [(1, 0, 0, 0)]*num_leds
+        send_hd108_colors_with_brightness(colors_16bit)
+        send_hd108_colors_with_brightness(colors_16bit)
         using_HD108_flag.clear()
 
     def halt_program():
@@ -250,7 +253,7 @@ def capture_image():
                 # cv2.imwrite(file_name, frame_plain)# no saving to memory 
         finally:
             camera.stop()
-            
+
         mergeMertens = cv2.createMergeMertens()
         fusion_res  = mergeMertens.process(frames)
         frame = np.clip(fusion_res * 255, 0, 255).astype('uint8')
@@ -974,7 +977,7 @@ def animation_thread_target():
 
 if has_animation:        
     # capture_thread = threading.Thread(target=capture_thread_target) # QObject::startTimer: Timers cannot be started from another thread
-    animation_thread = threading.Thread(target=animation_thread_target)
+    animation_thread = threading.Thread(target=animation_thread_target, daemon=True)
 
     # capture_thread.start()
     animation_thread.start()
