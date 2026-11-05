@@ -194,7 +194,7 @@ header = ["frame"]
 for i in range(num_leds):
     header.extend([f"light_{i}_Wt", f"light_{i}_R", f"light_{i}_G", f"light_{i}_B" ])
 
-white_frame = [[2, 2**16-1, 2**16-1, 2**16-1]]*num_leds
+# white_frame = [[2, 2**16-1, 2**16-1, 2**16-1]]*num_leds
 
 canvas = None
 canvas_size = 500
@@ -803,6 +803,8 @@ def animation_thread_target():
     while True:
         if moon_interaction_flag.is_set():
             current_time = datetime.fromtimestamp(time.time(), tz=ZoneInfo("America/Vancouver"))
+            illum, trend = moon_helper.get_illumination_and_trend(current_time)
+            moon_frame = moon_helper.generate_moon_frame(illum, trend)
             if not last_interaction_flag or time.time()//3600 != last_interaction_time:
                 last_interaction_time = time.time()//3600
                 # if new interaction
@@ -814,7 +816,7 @@ def animation_thread_target():
                 if len(data) == 0:
                     print("🌙 empty archive cover image")
                     if using_HD108_flag.is_set():
-                        send_hd108_colors_with_brightness(white_frame)
+                        send_hd108_colors_with_brightness(moon_frame)
                     continue
 
                 cover_start_time = datetime.fromtimestamp(data[0]["timestamp"]*3600, tz=ZoneInfo("America/Vancouver"))
@@ -832,10 +834,10 @@ def animation_thread_target():
 
                 if len(existing_hours)>0:
                     ## Match the current illumation and change 
-                    curr_illum, existing_data_indices = moon_helper.find_matched_indices(current_time, existing_hours)
+                    existing_data_indices = moon_helper.find_matched_indices(current_time, existing_hours)
                     if using_HD108_flag.is_set():
-                        #could match the illuminance here... 
-                        send_hd108_colors_with_brightness(white_frame)
+                        # match the illuminance here... 
+                        send_hd108_colors_with_brightness(moon_frame)
                     if len(existing_data_indices) > 0:
                         # New valid moon interaction; see scenario A in diagram
                         print("🌙 new valid moon interaction")
@@ -869,7 +871,7 @@ def animation_thread_target():
                     print("🌙 empty record image")
                     if using_HD108_flag.is_set():
                         #could match the illuminance here also? ... 
-                        send_hd108_colors_with_brightness(white_frame)
+                        send_hd108_colors_with_brightness(moon_frame)
                     
             # stay in moon interaction that's already setup; see scenario C in diagram
             last_interaction_flag = True

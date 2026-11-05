@@ -12,8 +12,12 @@ class MoonHelper:
         df_hourly_moon['Illum_Change'] = df_hourly_moon['Illumination'].diff().fillna(0)
         self.df_hourly_moon = df_hourly_moon
         self.precise_moon_phase = precise_moon_phase
+        data = np.load("moon_frames.npz")
+        self.led_moon_frames = data["moon_frames"]
+        self.led_illumination_ratios = data["illumination_ratios"]
+        self.led_trend = data["trend"]
 
-    def find_matched_indices(self, current_time, existing_hours):
+    def get_current_moon_illumination(self, current_time):
         current_time = pd.to_datetime(current_time)
         current_hour = current_time.hour
         current_time = current_time.normalize()+pd.to_timedelta(current_hour, unit='h')
@@ -27,6 +31,23 @@ class MoonHelper:
 
         # Determine the phase direction: True if getting brighter, False if getting darker
         is_waxing = target_change > 0 
+
+        return target_illum, is_waxing
+
+    def get_led_moon_frame(self, target_illum, is_waxing):
+        # Find the closest illumination in the precomputed LED frames
+        closest_index = np.argmin(np.abs(self.led_illumination_ratios - target_illum))
+        
+        # Check if the trend matches the desired waxing/waning state
+        if self.led_trend[closest_index] != is_waxing:
+            # If not, find the next closest match that has the correct trend
+            valid_indices = np.where(self.led_trend == is_waxing)[0]
+            closest_index = valid_indices[np.argmin(np.abs(self.led_illumination_ratios[valid_indices] - target_illum))]
+        
+        return self.led_moon_frames[closest_index]
+
+    def find_matched_indices(self, current_time, existing_hours):
+        target_illum, is_waxing = self.get_current_moon_illumination(current_time)
 
         # 5. Map these times to your specific hourly index starting in Nov 2025
         # Replace this with your exact starting datetime
@@ -83,4 +104,4 @@ class MoonHelper:
         # existing_data_indices = is_in_list[is_in_list].index.tolist()
         existing_data_indices = np.where(np.isin(existing_hours, filtered_matches['Hour_POSIX']))[0]
         print(existing_data_indices)
-        return target_illum, existing_data_indices
+        return existing_data_indices
