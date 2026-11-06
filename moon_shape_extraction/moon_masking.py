@@ -16,8 +16,8 @@ def get_led_points_pcb():
         # len = 12, i = 11, r = 100/10*(-1)+10 = 0
         # len = 12, i = 0, r = 100/10*(10)+10 = 110 
         for l in range(current_num):
-            x = - current_r*np.sin(np.pi*2/current_num*l)
-            y = - current_r*np.cos(np.pi*2/current_num*l)
+            x = current_r*np.cos(np.pi*2/current_num*l)
+            y = - current_r*np.sin(np.pi*2/current_num*l)
             led_points.append([x, y])
     print(f"initialized lamp with {len(led_points)} leds. ")
     return np.array(led_points)

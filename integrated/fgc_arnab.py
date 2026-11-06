@@ -817,6 +817,7 @@ def animation_thread_target():
                     print("🌙 empty archive cover image")
                     if using_HD108_flag.is_set():
                         send_hd108_colors_with_brightness(moon_frame)
+                        time.sleep(2)
                     continue
 
                 cover_start_time = datetime.fromtimestamp(data[0]["timestamp"]*3600, tz=ZoneInfo("America/Vancouver"))
