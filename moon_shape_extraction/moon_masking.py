@@ -44,7 +44,7 @@ frames = get_gif_frames()
 frames = np.delete(frames, 0, axis=0)
 frames = np.delete(frames, 13, axis=0)
 
-moon_frames = [[[2, 2**16-1, 2**16-1, 2**16-1]]*num_leds for _ in range(frames.shape[0])]
+moon_frames = [[[2, 0, 0, 0]]*num_leds for _ in range(frames.shape[0])]
 illuminated_pixels = []
 
 full_moon_size = 0
@@ -76,18 +76,18 @@ for fi, f in enumerate(frames):
         distances_to_false = np.linalg.norm(false_points_grid - led, axis=1)
         if np.min(distances_to_true) < np.min(distances_to_false):
             # print(f"led {led} is closer to true points than false points")
+            moon_frames[fi][li] = [2, 2**16-1, 2**16-1, 2**16-1]
             pass
         else:
             # print(f"led {led} is closer to false points than true points")
-            moon_frames[fi][li] = [2, 0, 0, 0]
             pass
 
     # plot the frame with the lit leds
-    plt.figure(figsize=(10, 10))
-    plt.imshow(f, cmap='jet')
-    led_colors = np.array(moon_frames[fi])[:, 1:]/2**16
-    plt.scatter(transformed_led_points[:, 1], transformed_led_points[:, 0], c=led_colors, s=50, alpha=0.7)
-    plt.show()
+    # plt.figure(figsize=(10, 10))
+    # plt.imshow(f, cmap='jet')
+    # led_colors = np.array(moon_frames[fi])[:, 1:]/2**16
+    # plt.scatter(transformed_led_points[:, 1], transformed_led_points[:, 0], c=led_colors, s=50, alpha=0.7)
+    # plt.show()
 
 
 print(f"Full moon size: {full_moon_size}")
