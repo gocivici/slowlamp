@@ -129,6 +129,10 @@ if using_pi:
     button = Button(17)
     button.when_pressed = trigger_interaction
     button.when_released = trigger_standard
+    if button.is_pressed:
+        trigger_interaction()
+    else:
+        trigger_standard()
 
     with_light_button = Button(27)
     with_sensing_button = Button(22)
@@ -137,8 +141,26 @@ if using_pi:
     # with_sensing_button.when_pressed = enable_program #TODO: give to power management
     with_sensing_button.when_released = halt_program 
 
+    if not with_light_button.is_pressed:
+        disable_lights()
+
 if using_HD108:
     import spidev
+
+    with open("slow_lamp_calibration.json") as f:
+        cal = json.load(f)
+
+
+    # --- Option A: full LUT, direct lookup, ~1.5MB in memory ---
+
+    r_full = cal["luts_full"]["red"]
+    g_full = cal["luts_full"]["green"]
+    b_full = cal["luts_full"]["blue"]
+
+
+    def correct_full(r, g, b):
+        """Direct lookup, no math at runtime."""
+        return r_full[r], g_full[g], b_full[b]
 
     spi = spidev.SpiDev()
     spi.open(0, 0)                                            # Open SPI bus 0, device 0
@@ -151,6 +173,7 @@ if using_HD108:
         
         for led_i, (brightness, r16, g16, b16) in enumerate(list(colors_16bit)):
             brightness, r16, g16, b16 = map(int, (brightness, r16, g16, b16))
+            r16, g16, b16 = correct_full(r16, g16, b16)  # Apply calibration LUTs
             # if led_i > 390:
               #  print("int values for LED", led_i, ": ",  brightness, r16, g16, b16)
             # print(int(r16/255), int(g16/255), int(b16/255))

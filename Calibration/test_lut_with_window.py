@@ -86,7 +86,7 @@ for r in list(range(0, 255, 64))+[255]:
 
 			res = cv2.waitKey(0)
 
-			fill_all(correct_full(target_rgb[0]*255, target_rgb[1]*255, target_rgb[2]*255))
+			fill_all(*correct_full(target_rgb[0]*255, target_rgb[1]*255, target_rgb[2]*255))
 
 			res = cv2.waitKey(0)
 			
