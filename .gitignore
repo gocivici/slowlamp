@@ -2,6 +2,7 @@ __pycache__/
 .venv/
 *.npz
 !pairings-32-GRBW.npz
+!moon_frames.npz
 storage.txt
 *_storage.txt
 composition_*
