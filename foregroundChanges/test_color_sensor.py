@@ -18,11 +18,11 @@ i2c = board.I2C()  # uses board.SCL and board.SDA
 sensor = AS7341(i2c)
 
 import board
-import neopixel
+# import neopixel
 
-neopixels = neopixel.NeoPixel(board.D12, 24, brightness=1, pixel_order = neopixel.GRBW)
+# neopixels = neopixel.NeoPixel(board.D12, 24, brightness=1, pixel_order = neopixel.GRBW)
 
-neopixels.fill((255, 70, 98))
+# neopixels.fill((255, 70, 98))
 
 # observer_start = 360 #nm
 # observer_end = 830 #nm
@@ -98,4 +98,4 @@ while True:
 				
     sleep(1)
 
-neopixels.fill((0, 0, 0))
+# neopixels.fill((0, 0, 0))

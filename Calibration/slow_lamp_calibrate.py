@@ -77,6 +77,7 @@ def fill_all(r, g, b):
     """Set all LEDs to the same colour."""
     colors = [(int(r), int(g), int(b))] * NUM_LEDS
     send_hd108_colors(colors)
+    send_hd108_colors(colors)
 
 
 def leds_off():
@@ -89,7 +90,7 @@ def leds_off():
 
 i2c = board.I2C()
 sensor = AS7341(i2c)
-sensor.gain = 1          # fixed gain (0.5x, 1x, 2x, ... 512x)
+sensor.gain = 5          # fixed gain (0.5x, 1x, 2x, ... 512x)
 sensor.atime = 100       # fixed integration time
 
 

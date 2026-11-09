@@ -45,11 +45,12 @@ def send_hd108_colors(colors_16bit, global_brightness=GLOBAL_BRIGHTNESS):
 def fill_all(r, g, b):
     colors = [(int(r), int(g), int(b))] * NUM_LEDS
     send_hd108_colors(colors)
+    send_hd108_colors(colors)
 
 
 i2c = board.I2C()
 sensor = AS7341(i2c)
-sensor.gain = 1
+sensor.gain = 5
 sensor.atime = 100
 
 CHANNEL_NAMES = [
@@ -77,20 +78,20 @@ if __name__ == "__main__":
             # dark
             print("\n--- Checking sensor placement ---\n")
             fill_all(0, 0, 0)
-            sleep(1)
+            sleep(3)
             dark = read_sensor()
             print(f"Dark baseline:  max={int(max(dark))}  {dark.astype(int)}")
 
             # dimmest step
             fill_all(DIMMEST_STEP, DIMMEST_STEP, DIMMEST_STEP)
-            sleep(1)
+            sleep(3)
             dim = read_sensor()
             dim_above_dark = dim - dark
             print(f"Dimmest (={DIMMEST_STEP}): max={int(max(dim))}  above dark={dim_above_dark.astype(int)}")
 
             # full white
             fill_all(65535, 65535, 65535)
-            sleep(1)
+            sleep(3)
             bright = read_sensor()
             peak = int(max(bright))
             print(f"Full white:     max={peak}  {bright.astype(int)}")
