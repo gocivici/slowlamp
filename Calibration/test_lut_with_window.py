@@ -9,18 +9,19 @@ from colormath.color_objects import LabColor, sRGBColor, LCHabColor
 from colormath.color_conversions import convert_color
 # import correct_color_RGBW
 import board
-from integrated.fgc_double_stream import get_colors_from_difference
+# from integrated.fgc_double_stream import get_colors_from_difference
 import spidev
 import json
 import kmeans_lab_medoids_spread
 
 feed_preview_size = 120
 using_pi = True 
+diyVersion = False
 
 #------------------------Camera Setup---------------------------------------
 from picamera2 import Picamera2
 if not diyVersion:
-    tuning_file_path = configData.get("camera_tuning_file")
+    tuning_file_path = ""
     if tuning_file_path != "":
         tuning = Picamera2.load_tuning_file(tuning_file_path) #imx477
         camera = Picamera2(tuning=tuning)
@@ -115,7 +116,7 @@ def get_colors_from_capture(current_img, num_colors, separate_vibrant = True):
     vibrant_color = np.array([255, 255, 255, 0])
     
     # image_rgb = cv2.cvtColor(fgimg,cv2.COLOR_BGR2RGB) #convert to RGB image
-    image_rgb = current_img
+    image_rgb = diff_preview
     # cv2.imshow("image-rgb", image_rgb)
     # print(f"original : {image_rgb}")
     pixels = image_rgb.reshape(-1, 3)
@@ -220,11 +221,11 @@ def fill_all(r, g, b):
 for r in list(range(0, 255, 64))+[255]:
     for g in list(range(0, 255, 64))+[255]:
         for b in list(range(0, 255, 64))+[255]:
-
+            print("capture photo")
             current_img = capture_image()
             needed_clusters = 5
-            prev_preview, vibrant_color, vr_count, supplemental_colors, supplemental_counts = get_colors_from_difference(current_img, needed_clusters)
-
+            prev_preview, vibrant_color, vr_count, supplemental_colors, supplemental_counts = get_colors_from_capture(current_img, needed_clusters)
+            print("after clustering")
 
             #target_colors.append( (r, g, b))
             if supplemental_counts[0] > vr_count:
