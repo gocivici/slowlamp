@@ -223,7 +223,7 @@ for r in list(range(0, 255, 64))+[255]:
 
             current_img = capture_image()
             needed_clusters = 5
-            _, vibrant_color, vr_count, supplemental_colors, supplemental_counts = get_colors_from_difference(current_img, needed_clusters)
+            prev_preview, vibrant_color, vr_count, supplemental_colors, supplemental_counts = get_colors_from_difference(current_img, needed_clusters)
 
 
             #target_colors.append( (r, g, b))
@@ -243,6 +243,8 @@ for r in list(range(0, 255, 64))+[255]:
             canvas[:, :, 0] = target_rgb[2]
             canvas[:, :, 1] = target_rgb[1]
             canvas[:, :, 2] = target_rgb[0]
+
+            canvas[0:prev_preview.shape[0], 0:prev_preview.shape[1], ::-1] = prev_preview
 
             cv2.imshow('frame', canvas)
 
