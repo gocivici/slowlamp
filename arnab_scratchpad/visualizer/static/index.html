@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lamp Replay</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <section class="sidebar-section">
+          <h2>Sample</h2>
+          <label class="upload-btn">
+            <input type="file" id="fileInput" accept=".txt,.png" />
+            <span>Load .txt or .png</span>
+          </label>
+          <div class="sample-info" id="sampleInfo">No sample loaded.</div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2>Sampling</h2>
+          <div class="segmented" id="modeGroup">
+            <button type="button" data-mode="all" class="active">All</button>
+            <button type="button" data-mode="filter">Filter</button>
+            <button type="button" data-mode="moon">Moon</button>
+          </div>
+          <div class="mode-panel" id="filterPanel" hidden>
+            <label class="field"><span>from</span><input type="date" id="fromDate" /></label>
+            <label class="field"><span>to</span><input type="date" id="toDate" /></label>
+            <label class="field">
+              <span>hour of day</span>
+              <select id="hourSelect"><option value="">any</option></select>
+            </label>
+            <label class="field"><span>every Nth</span><input type="number" id="stepInput" min="1" step="1" value="1" /></label>
+          </div>
+          <div class="mode-panel" id="moonPanel" hidden>
+            <label class="field field-wide"><span>lamp time</span><input type="datetime-local" id="moonTime" step="3600" /></label>
+            <p class="hint">Records the moon interaction would replay at this time: same illumination and phase direction, one per lunar cycle, same hour of day.</p>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2>Playback</h2>
+          <label class="field"><span>interval (s)</span><input type="number" id="interval" min="0.02" step="0.1" value="0.3" /></label>
+          <label class="field field-wide">
+            <span>groups on</span>
+            <select id="layoutSelect">
+              <option value="pcb">PCB rings</option>
+              <option value="grid23">23cm grid (fgc_arnab.py now)</option>
+            </select>
+          </label>
+          <button type="button" class="btn" id="buildBtn" disabled>Build playback</button>
+          <div class="sample-info" id="playbackInfo"></div>
+          <div class="row">
+            <button type="button" class="btn btn-accent" id="playBtn" disabled>Play</button>
+            <button type="button" class="btn" id="restartBtn" disabled>Restart</button>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2>View</h2>
+          <div class="segmented" id="viewGroup">
+            <button type="button" data-view="panel">Panel</button>
+            <button type="button" data-view="swatch">Swatch</button>
+            <button type="button" data-view="both" class="active">Both</button>
+          </div>
+          <label class="check"><input type="checkbox" id="diffuserToggle" checked /> Diffuser glow</label>
+          <label class="check"><input type="checkbox" id="brightnessToggle" checked /> Apply global brightness</label>
+        </section>
+
+        <section class="sidebar-section">
+          <h2>Status</h2>
+          <dl class="status" id="status"></dl>
+        </section>
+      </aside>
+
+      <main class="main">
+        <div class="canvas-frame" id="canvasFrame">
+          <div class="empty-state" id="emptyState">Load a trace log (.txt) or cover archive (.png) to replay it.</div>
+          <div class="tooltip" id="tooltip"></div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/sketch.js"></script>
+  </body>
+</html>
