@@ -1,7 +1,9 @@
 # Slow Lamp sensor placement check
 # Run this before calibration to find the right sensor distance.
-# Checks both ends of the range: full white (saturation risk)
-# and dimmest step (noise floor risk).
+# Checks both ends of what the calibration measures:
+#   - full white, the brightest thing it shows (saturation risk)
+#   - red, green and blue each alone at the dimmest step, the dimmest
+#     things it measures (noise floor risk)
 
 from time import sleep
 import numpy as np
@@ -82,12 +84,16 @@ if __name__ == "__main__":
             dark = read_sensor()
             print(f"Dark baseline:  max={int(max(dark))}  {dark.astype(int)}")
 
-            # dimmest step
-            fill_all(DIMMEST_STEP, DIMMEST_STEP, DIMMEST_STEP)
-            sleep(3)
-            dim = read_sensor()
-            dim_above_dark = dim - dark
-            print(f"Dimmest (={DIMMEST_STEP}): max={int(max(dim))}  above dark={dim_above_dark.astype(int)}")
+            # each colour alone at the dimmest step (the sweep measures them one at a time)
+            dim_peaks = {}
+            for name, rgb in [("red",   (DIMMEST_STEP, 0, 0)),
+                              ("green", (0, DIMMEST_STEP, 0)),
+                              ("blue",  (0, 0, DIMMEST_STEP))]:
+                fill_all(*rgb)
+                sleep(3)
+                above_dark = read_sensor() - dark
+                dim_peaks[name] = max(above_dark)
+                print(f"Dim {name:<5} (={DIMMEST_STEP}): above dark max={int(dim_peaks[name])}  {above_dark.astype(int)}")
 
             # full white
             fill_all(65535, 65535, 65535)
@@ -99,21 +105,22 @@ if __name__ == "__main__":
             # verdict
             print()
             saturated = peak >= 65535
-            too_dim = max(dim_above_dark) < 50
+            too_dim = [name for name, p in dim_peaks.items() if p < 50]
 
             if saturated and too_dim:
-                print("PROBLEM: saturated on bright AND too dim on low end.")
+                print(f"PROBLEM: saturated on bright AND too dim on {', '.join(too_dim)}.")
                 print("Try reducing sensor.gain instead of moving the sensor.")
             elif saturated:
                 print("TOO CLOSE: sensor saturating on full white.")
                 print("Move sensor further away.")
             elif too_dim:
-                print("TOO FAR: dimmest step is in the noise floor.")
+                print(f"TOO FAR: {', '.join(too_dim)} at the dimmest step is in the noise floor.")
                 print("Move sensor closer.")
             else:
                 headroom = 100 * (1 - peak / 65535)
-                snr = max(dim_above_dark) / max(max(dark), 1)
-                print(f"GOOD. Headroom: {headroom:.0f}%  Low-end SNR: {snr:.1f}x")
+                weakest = min(dim_peaks, key=dim_peaks.get)
+                snr = dim_peaks[weakest] / max(max(dark), 1)
+                print(f"GOOD. Headroom: {headroom:.0f}%  Low-end SNR: {snr:.1f}x (weakest: {weakest})")
                 print("Tape it down and run calibration.")
 
             fill_all(0, 0, 0)
