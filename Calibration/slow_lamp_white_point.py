@@ -20,8 +20,15 @@
 #      gain g on a channel means lut[i] -> lut[i * g].
 #
 # Accuracy: the AS7341 is a spectral sensor, not a colorimeter, so step 2 is an
-# approximation. Check the result by eye against a D65 monitor
-# (e.g. a MacBook with True Tone and Night Shift off).
+# approximation. The band values below are typical, theoretical values from
+# the datasheet, not measured on our sensor, so they might be wrong for it.
+# They were checked against the vector data in Figure 19 (all within 0.01).
+# But the datasheet's own count tables (Figures 8-15, 2700K LED) don't fully
+# agree with Figure 19: on a simulated panel the result lands near D65 if the
+# sensor behaves like Figure 19, and noticeably warm (x~0.35, y~0.35, towards
+# red/yellow) if it behaves like the count tables. Always check the result by
+# eye against a D65 monitor (e.g. a MacBook with True Tone and Night Shift
+# off) and restore the backup if it looks worse.
 #
 # References:
 #   - ams OSRAM AS7341 datasheet DS000504 v3-00 (2020-06-25),

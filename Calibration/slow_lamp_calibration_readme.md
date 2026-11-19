@@ -97,3 +97,47 @@ slow_lamp_precheck.py    Run first. Checks sensor distance is right.
 slow_lamp_calibrate.py   Run once with sensor taped down. Takes ~90 seconds.
 slow_lamp_apply_lut.py   Shows how to load and use the LUTs at runtime.
 slow_lamp_calibration.json   Generated output. Ship this with the lamp.
+slow_lamp_calibrate_single.py   Newer calibration at one brightness. See below.
+slow_lamp_white_point.py        Optional. Sets full white to D65. See below.
+AS7341_DS000504_v3-00.pdf       Sensor datasheet, used by the white point script.
+
+## Updated workflow (November 2026)
+
+The lamp runs at a single brightness register, so there's now a calibration
+script for just that one. The steps are:
+
+1. Stop the lamp so it isn't driving the LEDs at the same time:
+   `sudo systemctl stop slowlamp_app`
+
+2. Run `slow_lamp_precheck.py`. It now checks full white for clipping and each
+   colour on its own at the dimmest step for noise, and tells you which colour
+   failed.
+
+3. Let the lamp run for 10-15 minutes so the LEDs warm up. Cold LEDs give out
+   more light than warm ones, red especially.
+
+4. Run the calibration from the repo root:
+   `python Calibration/slow_lamp_calibrate_single.py`
+   The brightness register is set at the top (`BRIGHTNESS = 6`) and has to match
+   the lamp. It uses 0 plus 40 log-spaced steps per channel, so the dim end is measured
+   as finely as the top. It takes about 9 minutes, writes
+   `slow_lamp_calibration.json` to the repo root, and stops without saving if
+   the sensor clips.
+
+5. Compare the panel's full white with a MacBook showing a white page, in a dark
+   room, with True Tone, Night Shift and auto-brightness off. Only if there's a
+   clear tint, run from the repo root:
+   `python Calibration/slow_lamp_white_point.py`
+   It uses the readings the calibration already saved (no LEDs or sensor
+   needed), scales the three LUTs so full white lands on D65, and keeps the
+   original as `slow_lamp_calibration_before_white_point.json`. Check against
+   the MacBook again afterwards and copy the original back if it looks worse.
+
+Worth knowing: the LUTs only straighten each channel's curve. Each one is
+normalised to its own maximum, so they don't change the balance between red,
+green and blue. That balance is what the white point step sets. The white point
+script converts the sensor's 8 bands to colour using a model built from the
+datasheet, so it's an approximation, which is why the MacBook check comes first.
+
+The LUT index is linear light, so the lamp has to send linear values into it,
+not gamma-encoded sRGB.
