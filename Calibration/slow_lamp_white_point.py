@@ -1,7 +1,8 @@
 # Slow Lamp white point
-# Run after the colour calibration. Reads slow_lamp_calibration.json, works
-# out what white the panel makes at full red + green + blue, and scales the
-# three LUTs so full white lands on the target white (set by TARGET below).
+# Run after the colour calibration and slow_lamp_white_nudge.py. Reads
+# slow_lamp_calibration.json, works out what white the panel makes at full
+# red + green + blue, and scales the three LUTs so full white lands on the
+# target white (set by TARGET below).
 #
 # No LEDs or sensor needed: it uses the AS7341 readings for full red, full
 # green and full blue that the calibration already saved.
@@ -29,9 +30,10 @@
 # But the datasheet's own count tables (Figures 8-15, 2700K LED) don't fully
 # agree with Figure 19: on a simulated panel the result lands near D65 if the
 # sensor behaves like Figure 19, and noticeably warm (x~0.35, y~0.35, towards
-# red/yellow) if it behaves like the count tables. Always check the result by
-# eye against a D65 monitor (e.g. a MacBook with True Tone and Night Shift
-# off) and restore the backup if it looks worse.
+# red/yellow) if it behaves like the count tables. That's why it should start
+# from an eye match (slow_lamp_white_nudge.py): the sensor is then only used
+# for the step from D65 to the target, and those errors mostly cancel. If the
+# result looks wrong, restore the backup.
 #
 # References:
 #   - ams OSRAM AS7341 datasheet DS000504 v3-00 (2020-06-25),
@@ -54,10 +56,11 @@ import numpy as np
 CAL_FILE = sys.argv[1] if len(sys.argv) > 1 else "slow_lamp_calibration.json"
 BACKUP_FILE = CAL_FILE.replace(".json", "_before_white_point.json")
 
-# Which white to aim for. Use "macbook" first and check the panel
-# against the MacBook. If it matches, restore the backup, switch to
-# "lamp" and run it again.
-TARGET = "macbook"
+# Which white to aim for. "lamp" (4200 K, matches the camera) is the normal
+# setting: run slow_lamp_white_nudge.py first so this starts from your eye
+# match with the MacBook. "macbook" (D65) is only for checking the sensor
+# conversion against the MacBook on its own.
+TARGET = "lamp"
 
 TARGETS = {
     "macbook": (0.3127, 0.3290),   # D65, the white sRGB assumes
