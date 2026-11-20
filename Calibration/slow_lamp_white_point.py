@@ -16,6 +16,9 @@
 #   2. Fit a 3x8 matrix that turns the 8 band readings into CIE XYZ.
 #   3. Convert full red, green and blue to XYZ and solve for the three gains
 #      (largest = 1) that make their sum the target white.
+#      If slow_lamp_white_nudge.py has saved an eye match with the MacBook,
+#      start from that instead and only use the sensor for the step from
+#      D65 to the target, which makes it much less sensitive to step 2.
 #   4. Scale each LUT by its gain. The LUT index is a linear light level, so
 #      gain g on a channel means lut[i] -> lut[i * g].
 #
@@ -129,12 +132,25 @@ if __name__ == "__main__":
     print(f"Panel white now:  x={xy(white)[0]:.4f}  y={xy(white)[1]:.4f}")
     print(f"{'Target (' + TARGET + '):':<18}x={TARGET_XY[0]:.4f}  y={TARGET_XY[1]:.4f}")
 
-    # solve gains so gr*R + gg*G + gb*B = target white (up to brightness)
+    # solve gains so gr*R + gg*G + gb*B = a given white (up to brightness)
     A = np.column_stack([primaries["red"], primaries["green"], primaries["blue"]])
-    gains = np.linalg.solve(A, xy_to_XYZ(*TARGET_XY))
-    if np.any(gains <= 0):
-        sys.exit(f"Got non-positive gains {gains}. The sensor-to-XYZ conversion is "
-                 f"probably off for these LEDs; nothing was changed.")
+
+    def solve(target_xy):
+        g = np.linalg.solve(A, xy_to_XYZ(*target_xy))
+        if np.any(g <= 0):
+            sys.exit(f"Got non-positive gains {g}. The sensor-to-XYZ conversion is "
+                     f"probably off for these LEDs; nothing was changed.")
+        return g
+
+    if "eye_gains" in cal:
+        # slow_lamp_white_nudge.py matched the panel to the MacBook (D65) by eye.
+        # Start from that, and use the sensor model only for the step from D65
+        # to the target. Errors in the model mostly cancel in that step.
+        eye = np.array(cal["eye_gains"]["gains"])
+        gains = eye * solve(TARGETS["macbook"]) ** -1 * solve(TARGET_XY)
+        print("Starting from your eye match with the MacBook.")
+    else:
+        gains = solve(TARGET_XY)
     gains = gains / gains.max()
     print(f"Gains:            red={gains[0]:.3f}  green={gains[1]:.3f}  blue={gains[2]:.3f}")
 
