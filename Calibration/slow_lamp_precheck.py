@@ -71,7 +71,10 @@ def read_sensor():
             sensor.channel_630nm, sensor.channel_680nm,
         ])
         sleep(0.05)
-    return np.mean(readings, axis=0)
+    readings = np.array(readings)
+    # also return the highest single reading: the calibration stops if any
+    # one reading clips, so the clipping check has to look at each one
+    return readings.mean(axis=0), readings.max()
 
 
 if __name__ == "__main__":
@@ -81,7 +84,7 @@ if __name__ == "__main__":
             print("\n--- Checking sensor placement ---\n")
             fill_all(0, 0, 0)
             sleep(3)
-            dark = read_sensor()
+            dark, _ = read_sensor()
             print(f"Dark baseline:  max={int(max(dark))}  {dark.astype(int)}")
 
             # each colour alone at the dimmest step (the sweep measures them one at a time)
@@ -91,25 +94,25 @@ if __name__ == "__main__":
                               ("blue",  (0, 0, DIMMEST_STEP))]:
                 fill_all(*rgb)
                 sleep(3)
-                above_dark = read_sensor() - dark
+                above_dark = read_sensor()[0] - dark
                 dim_peaks[name] = max(above_dark)
                 print(f"Dim {name:<5} (={DIMMEST_STEP}): above dark max={int(dim_peaks[name])}  {above_dark.astype(int)}")
 
             # full white
             fill_all(65535, 65535, 65535)
             sleep(3)
-            bright = read_sensor()
+            bright, bright_max = read_sensor()
             peak = int(max(bright))
             print(f"Full white:     max={peak}  {bright.astype(int)}")
 
             # verdict
             print()
-            saturated = peak >= 65535
+            saturated = bright_max >= 65535
             too_dim = [name for name, p in dim_peaks.items() if p < 50]
 
             if saturated and too_dim:
                 print(f"PROBLEM: saturated on bright AND too dim on {', '.join(too_dim)}.")
-                print("Try reducing sensor.gain instead of moving the sensor.")
+                print("This shouldn't really happen at our brightness. Don't calibrate; pass this output on.")
             elif saturated:
                 print("TOO CLOSE: sensor saturating on full white.")
                 print("Move sensor further away.")

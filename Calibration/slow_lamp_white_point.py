@@ -1,7 +1,7 @@
 # Slow Lamp white point
 # Run after the colour calibration. Reads slow_lamp_calibration.json, works
 # out what white the panel makes at full red + green + blue, and scales the
-# three LUTs so full white lands on D65 (the white sRGB assumes).
+# three LUTs so full white lands on the target white (set by TARGET below).
 #
 # No LEDs or sensor needed: it uses the AS7341 readings for full red, full
 # green and full blue that the calibration already saved.
@@ -15,7 +15,7 @@
 #      width and relative responsivity.
 #   2. Fit a 3x8 matrix that turns the 8 band readings into CIE XYZ.
 #   3. Convert full red, green and blue to XYZ and solve for the three gains
-#      (largest = 1) that make their sum D65.
+#      (largest = 1) that make their sum the target white.
 #   4. Scale each LUT by its gain. The LUT index is a linear light level, so
 #      gain g on a channel means lut[i] -> lut[i * g].
 #
@@ -39,6 +39,8 @@
 #     Wyman, Sloan & Shirley, "Simple Analytic Approximations to the CIE XYZ
 #     Color Matching Functions", JCGT 2(2), 2013.
 #   - D65 white point x=0.3127, y=0.3290 (IEC 61966-2-1, sRGB).
+#   - 4200 K white x=0.3716, y=0.3718: Planck's law at 4200 K through the
+#     same CIE 1931 functions as below.
 
 import json
 import shutil
@@ -49,7 +51,16 @@ import numpy as np
 CAL_FILE = sys.argv[1] if len(sys.argv) > 1 else "slow_lamp_calibration.json"
 BACKUP_FILE = CAL_FILE.replace(".json", "_before_white_point.json")
 
-D65_XY = (0.3127, 0.3290)
+# Which white to aim for. Use "macbook" first and check the panel
+# against the MacBook. If it matches, restore the backup, switch to
+# "lamp" and run it again.
+TARGET = "macbook"
+
+TARGETS = {
+    "macbook": (0.3127, 0.3290),   # D65, the white sRGB assumes
+    "lamp":    (0.3716, 0.3718),   # 4200 K, matches the camera's white balance
+}
+TARGET_XY = TARGETS[TARGET]
 
 # AS7341 F1-F8: centre [nm], FWHM [nm] (datasheet Fig. 7),
 # peak responsivity relative to F8 (datasheet Fig. 19, read by eye)
@@ -105,7 +116,8 @@ if __name__ == "__main__":
         cal = json.load(f)
 
     if "white_point_gains" in cal:
-        sys.exit(f"{CAL_FILE} already has white point gains. Run on a fresh calibration.")
+        sys.exit(f"{CAL_FILE} already has white point gains. Copy {BACKUP_FILE} "
+                 f"back over it first, then run this again.")
 
     dark = np.array(cal["dark"])
     primaries = {}
@@ -115,11 +127,11 @@ if __name__ == "__main__":
 
     white = sum(primaries.values())
     print(f"Panel white now:  x={xy(white)[0]:.4f}  y={xy(white)[1]:.4f}")
-    print(f"Target (D65):     x={D65_XY[0]:.4f}  y={D65_XY[1]:.4f}")
+    print(f"{'Target (' + TARGET + '):':<18}x={TARGET_XY[0]:.4f}  y={TARGET_XY[1]:.4f}")
 
-    # solve gains so gr*R + gg*G + gb*B = D65 (up to brightness)
+    # solve gains so gr*R + gg*G + gb*B = target white (up to brightness)
     A = np.column_stack([primaries["red"], primaries["green"], primaries["blue"]])
-    gains = np.linalg.solve(A, xy_to_XYZ(*D65_XY))
+    gains = np.linalg.solve(A, xy_to_XYZ(*TARGET_XY))
     if np.any(gains <= 0):
         sys.exit(f"Got non-positive gains {gains}. The sensor-to-XYZ conversion is "
                  f"probably off for these LEDs; nothing was changed.")
@@ -136,7 +148,8 @@ if __name__ == "__main__":
         cal["luts_compact"][name] = new[compact_idx].tolist()
 
     cal["white_point_gains"] = {"red": float(gains[0]), "green": float(gains[1]),
-                                "blue": float(gains[2]), "target_xy": D65_XY}
+                                "blue": float(gains[2]), "target": TARGET,
+                                "target_xy": TARGET_XY}
 
     shutil.copyfile(CAL_FILE, BACKUP_FILE)
     with open(CAL_FILE, "w") as f:
