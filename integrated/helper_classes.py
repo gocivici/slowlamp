@@ -491,7 +491,7 @@ def gamut_map_oklab_perceptual(oklab_vec, max_iters=10):
 def oklab_to_srgb_255(oklab_vec):
     oklab_mapped = gamut_map_oklab_perceptual(oklab_vec)
     lsrgb = oklab_to_linear_srgb(oklab_mapped)
-    srgb = _linear_to_srgb(lsrgb)
+    # srgb = _linear_to_srgb(lsrgb)
     return srgb*255
 
 def convert_frame_to_oklab(frame):

@@ -34,6 +34,7 @@ first_x = 50
 npz_file = "july21-oct9_605-test.npz"
 csv_path = "july21-oct9_605-test.csv"
 
+np.random.seed(43)
 
 if using_HD108:
     import spidev

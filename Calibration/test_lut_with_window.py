@@ -218,6 +218,11 @@ def fill_all(r, g, b):
     send_hd108_colors(colors)
     send_hd108_colors(colors)  
 
+def srgb_to_linear_16(v):
+    c = v / 255
+    lin = c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    return int(round(lin * 65535))
+
 for r in list(range(0, 255, 64))+[255]:
     for g in list(range(0, 255, 64))+[255]:
         for b in list(range(0, 255, 64))+[255]:
@@ -237,9 +242,10 @@ for r in list(range(0, 255, 64))+[255]:
             
             # correct_rgbw =  correct_color_RGBW.correct_color(target_rgb)
             # print("correct_rgbw", correct_rgbw)
-
-            fill_all(target_rgb[0]*255, target_rgb[1]*255, target_rgb[2]*255)
-
+            lin = [srgb_to_linear_16(v) for v in target_rgb[:3]]
+            fill_all(*lin)                 # line 241, without LUT
+            # fill_all(target_rgb[0]*255, target_rgb[1]*255, target_rgb[2]*255)
+            
             canvas = np.ones((500, 500, 3)).astype(np.uint8)
             canvas[:, :, 0] = target_rgb[2]
             canvas[:, :, 1] = target_rgb[1]
@@ -251,7 +257,8 @@ for r in list(range(0, 255, 64))+[255]:
 
             res = cv2.waitKey(0)
 
-            fill_all(*correct_full(target_rgb[0]*255, target_rgb[1]*255, target_rgb[2]*255))
+            fill_all(*correct_full(*lin))  # line 254, with LUT
+            # fill_all(*correct_full(target_rgb[0]*255, target_rgb[1]*255, target_rgb[2]*255))
 
             res = cv2.waitKey(0)
             
